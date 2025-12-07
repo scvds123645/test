@@ -2,6 +2,16 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export const runtime = 'edge'; // 使用 Edge Runtime 获得最快响应
 
+// Vercel Geo 类型扩展
+interface VercelGeo {
+  city?: string;
+  country?: string;
+  region?: string;
+  latitude?: string;
+  longitude?: string;
+  timezone?: string;
+}
+
 // Vercel 原生 IP 检测 - 最快最准确
 export async function GET(request: NextRequest) {
   try {
@@ -12,9 +22,19 @@ export async function GET(request: NextRequest) {
       'Unknown';
 
     // 2. 从 Vercel 地理位置头部获取国家信息（最快）
-    const country = request.geo?.country || 'US';
-    const city = request.geo?.city || '';
-    const region = request.geo?.region || '';
+    // Vercel 在 Edge Runtime 中通过 headers 传递 geo 信息
+    const geo: VercelGeo = {
+      country: request.headers.get('x-vercel-ip-country') || undefined,
+      city: request.headers.get('x-vercel-ip-city') || undefined,
+      region: request.headers.get('x-vercel-ip-country-region') || undefined,
+      latitude: request.headers.get('x-vercel-ip-latitude') || undefined,
+      longitude: request.headers.get('x-vercel-ip-longitude') || undefined,
+      timezone: request.headers.get('x-vercel-ip-timezone') || undefined,
+    };
+
+    const country = geo.country || 'US';
+    const city = geo.city || '';
+    const region = geo.region || '';
     
     // 3. 国家名称映射（无需外部API）
     const countryNames: Record<string, string> = {
@@ -31,7 +51,7 @@ export async function GET(request: NextRequest) {
     const countryName = countryNames[country] || country;
 
     // 4. Vercel geo 数据存在即为准确
-    const accurate = !!(request.geo?.country);
+    const accurate = !!geo.country;
 
     // 5. 立即返回（无需等待外部API）
     return NextResponse.json({
@@ -42,9 +62,9 @@ export async function GET(request: NextRequest) {
       region,
       accurate,
       // 额外信息（可选）
-      latitude: request.geo?.latitude || null,
-      longitude: request.geo?.longitude || null,
-      timezone: request.geo?.timezone || null,
+      latitude: geo.latitude || null,
+      longitude: geo.longitude || null,
+      timezone: geo.timezone || null,
     }, {
       headers: {
         'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600',
