@@ -290,9 +290,9 @@ export default function FakerGenerator() {
         </div>
       </main>
 
-      <div className="fixed top-4 right-4 z-50 space-y-2 max-w-[calc(100vw-2rem)]">
+      <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 space-y-2 w-full max-w-xs px-4">
         {toasts.map((toast) => (
-          <div key={toast.id} className="bg-white/95 backdrop-blur-2xl border border-gray-200/80 px-4 py-3 rounded-2xl shadow-xl flex items-center gap-3 animate-slide-in">
+          <div key={toast.id} className="bg-white/95 backdrop-blur-2xl border border-gray-200/80 px-4 py-3 rounded-2xl shadow-xl flex items-center justify-center gap-3 animate-slide-down mx-auto">
             <div className={`w-1.5 h-1.5 rounded-full ${toast.type === 'success' ? 'bg-emerald-500 shadow-lg shadow-emerald-200' : 'bg-rose-500 shadow-lg shadow-rose-200'}`}></div>
             <span className="text-gray-800 text-sm font-medium truncate">{toast.message}</span>
           </div>
@@ -325,7 +325,6 @@ export default function FakerGenerator() {
                   className="w-full bg-gray-50/80 border border-gray-200/80 rounded-xl pl-10 pr-4 py-3 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all font-medium"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  autoFocus
                 />
               </div>
             </div>
@@ -359,9 +358,11 @@ export default function FakerGenerator() {
 
       <style jsx>{`
         @keyframes slide-in { from { transform: translateX(120%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        @keyframes slide-down { from { transform: translateY(-100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
         @keyframes slide-up { from { transform: translateY(100%); } to { transform: translateY(0); } }
         @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
         .animate-slide-in { animation: slide-in 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); }
+        .animate-slide-down { animation: slide-down 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); }
         .animate-slide-up { animation: slide-up 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); }
         .animate-fade-in { animation: fade-in 0.3s ease-out; }
       `}</style>
