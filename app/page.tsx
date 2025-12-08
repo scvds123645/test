@@ -150,8 +150,8 @@ export default function FakerGenerator() {
   const [showCountrySelect, setShowCountrySelect] = useState(false);
   const [ipInfo, setIpInfo] = useState<IPInfo | null>(null);
 
-  // 优化:使用 useRef 避免创建新函数
-  const toastTimerRef = useRef<NodeJS.Timeout>();
+  // 修复:为 useRef 提供初始值 undefined
+  const toastTimerRef = useRef<NodeJS.Timeout | undefined>(undefined);
 
   const showToast = useCallback((msg: string) => {
     if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
