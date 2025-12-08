@@ -1,87 +1,275 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-export const runtime = 'edge'; // 使用 Edge Runtime 获得最快响应
+// 移除 edge runtime 限制,使用 Node.js runtime
+// export const runtime = 'edge';
 
-// Vercel Geo 类型扩展
-interface VercelGeo {
-  city?: string;
+interface IPApiResponse {
+  status?: string;
   country?: string;
+  countryCode?: string;
   region?: string;
-  latitude?: string;
-  longitude?: string;
+  regionName?: string;
+  city?: string;
+  zip?: string;
+  lat?: number;
+  lon?: number;
+  timezone?: string;
+  query?: string;
+}
+
+interface IPWhoIsResponse {
+  success?: boolean;
+  ip?: string;
+  country?: string;
+  country_code?: string;
+  region?: string;
+  city?: string;
+  latitude?: number;
+  longitude?: number;
+  timezone?: {
+    id?: string;
+  };
+}
+
+interface IPInfoResponse {
+  ip?: string;
+  city?: string;
+  region?: string;
+  country?: string;
+  loc?: string;
   timezone?: string;
 }
 
-// Vercel 原生 IP 检测 - 最快最准确
 export async function GET(request: NextRequest) {
-  try {
-    // 1. 从 Vercel Edge 网络直接获取真实 IP
-    const ip = 
-      request.headers.get('x-real-ip') || 
-      request.headers.get('x-forwarded-for')?.split(',')[0].trim() ||
-      'Unknown';
+  // 获取真实 IP 地址
+  const forwardedFor = request.headers.get('x-forwarded-for');
+  const realIP = request.headers.get('x-real-ip');
+  const cfConnectingIP = request.headers.get('cf-connecting-ip');
+  
+  const ip = cfConnectingIP || 
+             (forwardedFor ? forwardedFor.split(',')[0].trim() : null) || 
+             realIP || 
+             '未知';
 
-    // 2. 从 Vercel 地理位置头部获取国家信息（最快）
-    // Vercel 在 Edge Runtime 中通过 headers 传递 geo 信息
-    const geo: VercelGeo = {
-      country: request.headers.get('x-vercel-ip-country') || undefined,
-      city: request.headers.get('x-vercel-ip-city') || undefined,
-      region: request.headers.get('x-vercel-ip-country-region') || undefined,
-      latitude: request.headers.get('x-vercel-ip-latitude') || undefined,
-      longitude: request.headers.get('x-vercel-ip-longitude') || undefined,
-      timezone: request.headers.get('x-vercel-ip-timezone') || undefined,
-    };
+  console.log('检测到的 IP 地址:', ip);
+  console.log('请求头信息:', {
+    'x-forwarded-for': forwardedFor,
+    'x-real-ip': realIP,
+    'cf-connecting-ip': cfConnectingIP
+  });
 
-    const country = geo.country || 'US';
-    const city = geo.city || '';
-    const region = geo.region || '';
+  // 检查是否为有效的公网 IP
+  const isValidPublicIP = (ipAddr: string): boolean => {
+    if (ipAddr === '未知' || !ipAddr) return false;
     
-    // 3. 国家名称映射（无需外部API）
-    const countryNames: Record<string, string> = {
-      'CN': '中国', 'HK': '香港', 'TW': '台湾', 'MO': '澳门',
-      'SG': '新加坡', 'US': '美国', 'JP': '日本', 'GB': '英国',
-      'DE': '德国', 'FR': '法国', 'KR': '韩国', 'CA': '加拿大',
-      'AU': '澳大利亚', 'IT': '意大利', 'ES': '西班牙',
-      'BR': '巴西', 'RU': '俄罗斯', 'IN': '印度', 'MX': '墨西哥',
-      'NL': '荷兰', 'SE': '瑞典', 'CH': '瑞士', 'PL': '波兰',
-      'TR': '土耳其', 'TH': '泰国', 'MY': '马来西亚',
-      'ID': '印尼', 'PH': '菲律宾', 'VN': '越南'
-    };
-
-    const countryName = countryNames[country] || country;
-
-    // 4. Vercel geo 数据存在即为准确
-    const accurate = !!geo.country;
-
-    // 5. 立即返回（无需等待外部API）
-    return NextResponse.json({
-      ip,
-      country,
-      countryName,
-      city,
-      region,
-      accurate,
-      // 额外信息（可选）
-      latitude: geo.latitude || null,
-      longitude: geo.longitude || null,
-      timezone: geo.timezone || null,
-    }, {
-      headers: {
-        'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600',
-      }
-    });
-
-  } catch (error) {
-    console.error('IP Detection Error:', error);
+    // 排除内网 IP
+    const privateRanges = [
+      /^10\./,
+      /^172\.(1[6-9]|2[0-9]|3[0-1])\./,
+      /^192\.168\./,
+      /^127\./,
+      /^localhost$/i,
+      /^::1$/,
+      /^fe80:/i
+    ];
     
-    // 降级方案
+    return !privateRanges.some(pattern => pattern.test(ipAddr));
+  };
+
+  if (!isValidPublicIP(ip)) {
+    console.warn('检测到内网 IP 或无效 IP:', ip);
     return NextResponse.json({
-      ip: 'Unknown',
+      source: 'header',
+      ip: ip,
       country: 'US',
-      countryName: '未知',
+      countryName: 'United States',
       city: '',
       region: '',
+      timezone: '',
+      latitude: null,
+      longitude: null,
       accurate: false,
+      error: '无法检测到有效的公网 IP 地址 (可能在本地环境或内网)'
     });
   }
+
+  // 方案 1: ipwho.is (完全免费,无需 API key,推荐)
+  try {
+    console.log('尝试使用 ipwho.is API...');
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
+    
+    const response = await fetch(`https://ipwho.is/${ip}`, {
+      headers: { 
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        'Accept': 'application/json'
+      },
+      signal: controller.signal
+    });
+    
+    clearTimeout(timeoutId);
+    
+    if (response.ok) {
+      const data: IPWhoIsResponse = await response.json();
+      console.log('ipwho.is 返回数据:', data);
+      
+      if (data.success && data.country_code) {
+        console.log('ipwho.is 成功返回:', {
+          ip: data.ip,
+          country_code: data.country_code,
+          country: data.country
+        });
+        
+        return NextResponse.json({
+          source: 'ipwhois',
+          ip: data.ip || ip,
+          country: data.country_code,
+          countryName: data.country,
+          city: data.city || '',
+          region: data.region || '',
+          timezone: data.timezone?.id || '',
+          latitude: data.latitude || null,
+          longitude: data.longitude || null,
+          accurate: true
+        });
+      }
+    }
+  } catch (error) {
+    console.error('ipwho.is 请求失败:', error);
+  }
+
+  // 方案 2: ip-api.com (免费,限制:每分钟 45 次请求)
+  try {
+    console.log('尝试使用 ip-api.com API...');
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
+    
+    const response = await fetch(`http://ip-api.com/json/${ip}?fields=status,country,countryCode,region,regionName,city,zip,lat,lon,timezone,query`, {
+      headers: { 
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        'Accept': 'application/json'
+      },
+      signal: controller.signal
+    });
+    
+    clearTimeout(timeoutId);
+    
+    if (response.ok) {
+      const data: IPApiResponse = await response.json();
+      console.log('ip-api.com 返回数据:', data);
+      
+      if (data.status === 'success' && data.countryCode) {
+        return NextResponse.json({
+          source: 'ip-api',
+          ip: data.query || ip,
+          country: data.countryCode,
+          countryName: data.country,
+          city: data.city || '',
+          region: data.regionName || data.region || '',
+          timezone: data.timezone || '',
+          latitude: data.lat || null,
+          longitude: data.lon || null,
+          accurate: true
+        });
+      }
+    }
+  } catch (error) {
+    console.error('ip-api.com 请求失败:', error);
+  }
+
+  // 方案 3: ipapi.co (免费,限制:每天 1000 次请求)
+  try {
+    console.log('尝试使用 ipapi.co API...');
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
+    
+    const response = await fetch(`https://ipapi.co/${ip}/json/`, {
+      headers: { 
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        'Accept': 'application/json'
+      },
+      signal: controller.signal
+    });
+    
+    clearTimeout(timeoutId);
+    
+    if (response.ok) {
+      const data: any = await response.json();
+      console.log('ipapi.co 返回数据:', data);
+      
+      if (data.country_code && !data.error) {
+        return NextResponse.json({
+          source: 'ipapi.co',
+          ip: data.ip || ip,
+          country: data.country_code,
+          countryName: data.country_name,
+          city: data.city || '',
+          region: data.region || '',
+          timezone: data.timezone || '',
+          latitude: data.latitude || null,
+          longitude: data.longitude || null,
+          accurate: true
+        });
+      }
+    }
+  } catch (error) {
+    console.error('ipapi.co 请求失败:', error);
+  }
+
+  // 方案 4: ipinfo.io (免费,限制:每月 50000 次请求)
+  try {
+    console.log('尝试使用 ipinfo.io API...');
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
+    
+    const response = await fetch(`https://ipinfo.io/${ip}/json`, {
+      headers: { 
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        'Accept': 'application/json'
+      },
+      signal: controller.signal
+    });
+    
+    clearTimeout(timeoutId);
+    
+    if (response.ok) {
+      const data: IPInfoResponse = await response.json();
+      console.log('ipinfo.io 返回数据:', data);
+      
+      if (data.country) {
+        const [lat, lon] = data.loc?.split(',').map(Number) || [null, null];
+        
+        return NextResponse.json({
+          source: 'ipinfo',
+          ip: data.ip || ip,
+          country: data.country,
+          countryName: data.country,
+          city: data.city || '',
+          region: data.region || '',
+          timezone: data.timezone || '',
+          latitude: lat,
+          longitude: lon,
+          accurate: true
+        });
+      }
+    }
+  } catch (error) {
+    console.error('ipinfo.io 请求失败:', error);
+  }
+
+  // 所有方案都失败,返回基础信息
+  console.error('所有 IP 检测 API 都失败了');
+  return NextResponse.json({
+    source: 'fallback',
+    ip: ip,
+    country: 'US',
+    countryName: 'United States',
+    city: '',
+    region: '',
+    timezone: '',
+    latitude: null,
+    longitude: null,
+    accurate: false,
+    error: '所有 IP 检测服务暂时不可用,请稍后重试'
+  });
 }

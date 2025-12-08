@@ -1,7 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
-// ✅ 从 lib 导入所有函数和数据 (保持不变)
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { 
   generateName, 
   generateBirthday, 
@@ -11,8 +10,6 @@ import {
   getCountryConfig 
 } from '@/lib/generator';
 import { countries, CountryConfig } from '@/lib/countryData';
-
-// ==================== 类型定义 (保持不变) ====================
 
 interface UserInfo {
   firstName: string;
@@ -38,9 +35,7 @@ interface IPInfo {
   accurate: boolean;
 }
 
-// ==================== 主组件 ====================
-
-export default function FBAssistant() {
+export default function FakerGenerator() {
   const [selectedCountry, setSelectedCountry] = useState<CountryConfig>(countries[0]);
   const [userInfo, setUserInfo] = useState<UserInfo>({
     firstName: '', lastName: '', birthday: '', phone: '', password: '', email: ''
@@ -50,42 +45,33 @@ export default function FBAssistant() {
   const [isLoading, setIsLoading] = useState(true);
   const [showCountrySelect, setShowCountrySelect] = useState(false);
   const toastIdRef = useRef(0);
-  
-  // ✅ IP 信息状态
   const [ipInfo, setIpInfo] = useState<IPInfo | null>(null);
-  const [ipLoading, setIpLoading] = useState(true);
 
-  const showToast = (message: string, type: 'success' | 'error' | 'info' = 'success') => {
+  const showToast = useCallback((message: string, type: 'success' | 'error' | 'info' = 'success') => {
     const id = ++toastIdRef.current;
     setToasts(prev => [...prev, { id, message, type }]);
     setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 2500);
-  };
+  }, []);
 
-  const copyToClipboard = async (text: string, label: string) => {
+  const copyToClipboard = useCallback(async (text: string, label: string) => {
     if (!text) return;
     try {
       await navigator.clipboard.writeText(text);
-      // 触觉反馈 (仅移动端支持)
-      if (navigator.vibrate) navigator.vibrate(50);
       showToast(`${label} 已复制`);
     } catch (e) {
       showToast('复制失败', 'error');
     }
-  };
+  }, [showToast]);
 
-  // ✅ 获取 IP 信息 (保持不变)
-  const fetchIPInfo = async () => {
+  const fetchIPInfo = useCallback(async () => {
     try {
-      setIpLoading(true);
       const response = await fetch('/api/ip-info');
       const data = await response.json();
       
-      console.log('=== IP API 返回完整数据 ===', data);
-      
       setIpInfo({
-        ip: data.ip || '未知',
+        ip: data.ip || 'Unknown',
         country: data.country || 'US',
-        countryName: data.countryName || '未知',
+        countryName: data.countryName || 'Unknown',
         city: data.city || '',
         region: data.region || '',
         accurate: data.accurate || false,
@@ -98,32 +84,34 @@ export default function FBAssistant() {
         }
       }
     } catch (error) {
-      console.error('获取 IP 信息失败:', error);
-      setIpInfo({
-        ip: '获取失败',
-        country: 'US',
-        countryName: '未知',
-        city: '',
-        region: '',
-        accurate: false,
-      });
-    } finally {
-      setIpLoading(false);
+      console.error('IP detection failed:', error);
     }
-  };
+  }, []);
 
-  // ✅ 使用导入的函数 (保持不变)
-  const generate = () => {
+  const generate = useCallback(() => {
     const name = generateName(selectedCountry.code);
+    const birthday = generateBirthday();
+    const phone = generatePhone(selectedCountry);
+    const password = generatePassword();
+    const email = generateEmail(name.firstName, name.lastName);
+    
     setUserInfo({
       firstName: name.firstName,
       lastName: name.lastName,
-      birthday: generateBirthday(),
-      phone: generatePhone(selectedCountry),
-      password: generatePassword(),
-      email: generateEmail(name.firstName, name.lastName),
+      birthday,
+      phone,
+      password,
+      email,
     });
-  };
+  }, [selectedCountry]);
+
+  const filteredCountries = useMemo(() => {
+    const query = searchQuery.toLowerCase();
+    return countries.filter(c => 
+      c.name.toLowerCase().includes(query) || 
+      c.code.toLowerCase().includes(query)
+    );
+  }, [searchQuery]);
 
   useEffect(() => {
     const init = async () => {
@@ -131,310 +119,236 @@ export default function FBAssistant() {
       setIsLoading(false);
     };
     init();
-  }, []);
+  }, [fetchIPInfo]);
 
   useEffect(() => {
     if (!isLoading && selectedCountry) {
       generate();
     }
-  }, [selectedCountry, isLoading]);
+  }, [selectedCountry, isLoading, generate]);
 
-  // Loading 界面优化
+  const handleCloseCountrySelect = useCallback(() => {
+    setShowCountrySelect(false);
+    setSearchQuery('');
+  }, []);
+
+  const handleSelectCountry = useCallback((country: CountryConfig) => {
+    setSelectedCountry(country);
+    handleCloseCountrySelect();
+  }, [handleCloseCountrySelect]);
+
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-[#F2F2F7] flex flex-col items-center justify-center">
-        <div className="w-10 h-10 border-4 border-[#007AFF]/20 border-t-[#007AFF] rounded-full animate-spin mb-4"></div>
-        <p className="text-gray-500 text-sm font-medium animate-pulse">正在准备环境...</p>
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="relative w-12 h-12 mx-auto mb-3">
+            <div className="absolute inset-0 border-2 border-indigo-100 rounded-full"></div>
+            <div className="absolute inset-0 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
+          </div>
+          <p className="text-gray-500 text-sm font-medium">正在加载...</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#F2F2F7] pb-20 selection:bg-[#007AFF]/20 selection:text-[#007AFF] font-sans">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50 relative overflow-hidden">
       
-      {/* iOS 风格大标题导航栏 */}
-      <header className="pt-14 pb-2 px-5 sticky top-0 bg-[#F2F2F7]/80 backdrop-blur-xl z-30 transition-all border-b border-transparent">
-        <div className="max-w-md mx-auto flex justify-between items-end">
-          <div>
-            <h1 className="text-[34px] font-bold tracking-tight text-black leading-tight">
-              脸书小助手
-            </h1>
-            <p className="text-gray-500 text-[15px] font-medium mt-1">
-              注册辅助工具
-            </p>
-          </div>
-          <div className="mb-2">
-            <span className="inline-flex items-center justify-center px-2.5 py-1 rounded-full bg-blue-100 text-[#007AFF] text-[11px] font-bold uppercase tracking-wide">
-              v1.0
-            </span>
+      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-[-10%] right-[-5%] w-96 h-96 bg-gradient-to-br from-indigo-200/30 to-purple-200/20 rounded-full blur-3xl"></div>
+        <div className="absolute bottom-[-10%] left-[-5%] w-96 h-96 bg-gradient-to-tr from-blue-200/30 to-cyan-200/20 rounded-full blur-3xl"></div>
+      </div>
+
+      <header className="sticky top-0 z-40 backdrop-blur-2xl bg-white/70 border-b border-gray-200/50 shadow-sm">
+        <div className="max-w-5xl mx-auto px-5 py-4">
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-200/50">
+                <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                </svg>
+              </div>
+              <div>
+                <h1 className="text-lg font-bold text-gray-900 tracking-tight">脸书小助手</h1>
+                <p className="text-xs text-gray-500 font-medium">@fang180</p>
+              </div>
+            </div>
+            {ipInfo && (
+              <div className="flex items-center gap-2 bg-white/80 backdrop-blur-xl px-3 py-2 rounded-full border border-gray-200/60 shadow-sm">
+                <div className="relative">
+                  <div className={`w-2 h-2 rounded-full ${ipInfo.accurate ? 'bg-emerald-500' : 'bg-amber-500'}`}></div>
+                  <div className={`absolute inset-0 rounded-full ${ipInfo.accurate ? 'bg-emerald-500' : 'bg-amber-500'} animate-ping opacity-75`}></div>
+                </div>
+                <span className="text-xs text-gray-700 font-mono font-medium max-w-[100px] truncate">{ipInfo.ip}</span>
+              </div>
+            )}
           </div>
         </div>
       </header>
 
-      <main className="max-w-md mx-auto px-4 space-y-6 mt-4">
+      <main className="max-w-5xl mx-auto px-5 py-6 relative z-10 pb-24">
         
-        {/* 环境信息卡片 (iOS Inset Grouped List 风格) */}
-        <section>
-          <div className="pl-4 mb-2 text-[13px] font-medium text-gray-500 uppercase tracking-wider">
-            当前环境
-          </div>
-          <div className="bg-white rounded-[20px] overflow-hidden shadow-[0_1px_2px_rgba(0,0,0,0.03)] ring-1 ring-black/5">
-            
-            {/* IP 信息行 */}
-            <div className="flex items-center justify-between p-4 bg-white active:bg-gray-50 transition-colors">
-              <div className="flex items-center gap-3 flex-1 min-w-0">
-                <div className="w-8 h-8 rounded-full bg-green-100 text-green-600 flex items-center justify-center text-lg flex-shrink-0">
-                  {ipLoading ? '⏳' : '📡'}
-                </div>
-                <div className="flex-1 min-w-0">
-                  {ipLoading ? (
-                    <div className="space-y-1">
-                      <div className="h-4 bg-gray-100 rounded w-24 animate-pulse"></div>
-                      <div className="h-3 bg-gray-50 rounded w-16 animate-pulse"></div>
-                    </div>
-                  ) : (
-                    <>
-                      <div className="text-[16px] font-semibold text-gray-900 truncate">
-                        {ipInfo?.ip || '未知'}
-                      </div>
-                      <div className="text-[13px] text-gray-500 truncate">
-                        {ipInfo?.city && ipInfo?.region 
-                          ? `${ipInfo.city}, ${ipInfo.region}` 
-                          : ipInfo?.countryName || '未知位置'
-                        }
-                      </div>
-                    </>
-                  )}
-                </div>
-              </div>
-              <div className="flex items-center gap-1.5 flex-shrink-0 bg-gray-50 px-2 py-1 rounded-md">
-                <div className={`w-2 h-2 rounded-full ${ipInfo?.accurate ? 'bg-[#34C759]' : 'bg-orange-400'} animate-pulse`}></div>
-                <span className={`text-[11px] font-semibold ${ipInfo?.accurate ? 'text-[#34C759]' : 'text-orange-500'}`}>
-                  {ipLoading ? '检测中' : (ipInfo?.accurate ? '已验证' : '未验证')}
-                </span>
-              </div>
-            </div>
-
-            {/* 分割线 (左侧留白) */}
-            <div className="ml-[56px] h-[0.5px] bg-gray-200"></div>
-
-            {/* 国家选择行 */}
-            <button 
+        <div className="grid grid-cols-2 gap-3 mb-5">
+          
+          <div>
+            <label className="block text-xs text-gray-600 mb-2 font-semibold px-1 tracking-wide">选择地区</label>
+            <button
               onClick={() => setShowCountrySelect(true)}
-              className="w-full flex items-center justify-between p-4 bg-white hover:bg-gray-50 active:bg-gray-100 transition-colors group"
+              className="w-full bg-white/90 backdrop-blur-xl border border-gray-200/80 rounded-2xl p-3.5 flex items-center justify-between transition-all shadow-sm hover:shadow-md hover:border-indigo-300/60 active:scale-[0.98] touch-manipulation group"
             >
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-gray-50 border border-gray-100 flex items-center justify-center text-xl shadow-sm">
-                  {selectedCountry.flag}
-                </div>
-                <div className="text-left">
-                  <div className="text-[16px] font-semibold text-gray-900 group-hover:text-[#007AFF] transition-colors">
-                    {selectedCountry.name}
-                  </div>
-                  <div className="text-[13px] text-gray-500 font-mono tracking-tight">
-                    {selectedCountry.phonePrefix}
-                  </div>
+                <div className="text-3xl flex-shrink-0 transform group-hover:scale-110 transition-transform">{selectedCountry.flag}</div>
+                <div className="text-left min-w-0">
+                  <div className="font-semibold text-gray-900 text-sm truncate">{selectedCountry.name}</div>
+                  <div className="text-xs text-gray-500 font-medium mt-0.5">{selectedCountry.code}</div>
                 </div>
               </div>
-              <div className="flex items-center gap-2 text-gray-400">
-                <span className="text-[15px] text-gray-400 group-active:text-gray-600">更改</span>
-                <svg className="w-4 h-4 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                </svg>
-              </div>
+              <svg className="w-4 h-4 text-gray-400 flex-shrink-0 group-hover:text-indigo-500 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+              </svg>
             </button>
           </div>
-        </section>
 
-        {/* 身份信息卡片 */}
-        <section>
-          <div className="flex items-center justify-between px-4 mb-2">
-            <h3 className="text-[13px] font-medium text-gray-500 uppercase tracking-wider">生成信息</h3>
-            <button 
+          <div>
+            <label className="block text-xs text-gray-600 mb-2 font-semibold px-1 tracking-wide">快速操作</label>
+            <button
               onClick={generate}
-              className="text-[#007AFF] text-[13px] font-semibold active:opacity-50 transition-opacity"
+              className="relative w-full bg-gradient-to-br from-indigo-500 via-indigo-600 to-purple-600 text-white rounded-2xl px-4 py-3.5 font-semibold text-sm transition-all shadow-lg shadow-indigo-200/50 hover:shadow-xl hover:shadow-indigo-300/60 flex items-center justify-center gap-2.5 active:scale-[0.97] touch-manipulation group overflow-hidden"
             >
-              刷新全部
+              <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+              <svg className="w-5 h-5 relative z-10 group-hover:rotate-180 transition-transform duration-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+              <span className="relative z-10">随机生成</span>
             </button>
           </div>
+        </div>
+
+        <div className="space-y-3">
+          <DataField label="姓氏" value={userInfo.lastName} icon="👤" color="indigo" onCopy={() => copyToClipboard(userInfo.lastName, '姓氏')} />
+          <DataField label="名字" value={userInfo.firstName} icon="👤" color="purple" onCopy={() => copyToClipboard(userInfo.firstName, '名字')} />
+          <DataField label="生日" value={userInfo.birthday} icon="🎂" color="pink" onCopy={() => copyToClipboard(userInfo.birthday, '生日')} />
+          <DataField label="手机号" value={userInfo.phone} icon="📱" color="blue" mono onCopy={() => copyToClipboard(userInfo.phone, '手机号')} />
+          <DataField label="密码" value={userInfo.password} icon="🔑" color="emerald" mono onCopy={() => copyToClipboard(userInfo.password, '密码')} />
           
-          <div className="bg-white rounded-[20px] overflow-hidden shadow-[0_1px_2px_rgba(0,0,0,0.03)] ring-1 ring-black/5">
-            <InfoRow 
-              label="姓名" 
-              value={`${userInfo.lastName} ${userInfo.firstName}`} 
-              icon="👤"
-              onCopy={() => copyToClipboard(`${userInfo.lastName} ${userInfo.firstName}`, '姓名')} 
-            />
-            <InfoRow 
-              label="生日" 
-              value={userInfo.birthday} 
-              icon="🎂"
-              onCopy={() => copyToClipboard(userInfo.birthday, '生日')} 
-            />
-            <InfoRow 
-              label="手机" 
-              value={userInfo.phone} 
-              icon="📱"
-              isMono
-              onCopy={() => copyToClipboard(userInfo.phone, '手机号')} 
-            />
-            <InfoRow 
-              label="密码" 
-              value={userInfo.password} 
-              icon="🔑"
-              isMono
-              onCopy={() => copyToClipboard(userInfo.password, '密码')} 
-            />
-            
-            <div className="ml-[52px] h-[0.5px] bg-gray-200"></div>
-            
-            {/* 邮箱行 (特殊布局) */}
-            <div className="flex items-center justify-between p-3 pl-4 pr-3 bg-white group hover:bg-gray-50 transition-colors">
-              <div className="flex items-center gap-3 flex-1 min-w-0">
-                <div className="w-7 h-7 rounded-[7px] bg-indigo-50 text-indigo-500 flex items-center justify-center text-sm">
-                  📧
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="text-[11px] text-gray-500 font-medium mb-0.5">邮箱</div>
-                  <div className="text-[16px] text-gray-900 font-mono tracking-tight truncate select-all">
-                    {userInfo.email}
+          <div className="bg-gradient-to-br from-white/95 to-white/80 backdrop-blur-2xl border border-gray-200/80 rounded-2xl p-4 shadow-lg hover:shadow-xl transition-all">
+            <div className="flex flex-col gap-3">
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2.5 mb-2">
+                  <div className="w-8 h-8 bg-gradient-to-br from-amber-400 to-orange-500 rounded-xl flex items-center justify-center shadow-md">
+                    <span className="text-lg">📧</span>
                   </div>
+                  <span className="text-xs text-gray-600 font-bold uppercase tracking-wider">临时邮箱</span>
+                </div>
+                <div className="text-gray-900 text-sm break-all font-mono leading-relaxed bg-gray-50/80 rounded-xl px-3 py-2.5 border border-gray-100">
+                  {userInfo.email || '请点击生成按钮'}
                 </div>
               </div>
-              <div className="flex items-center gap-2">
-                {/* 复制邮箱 */}
-                <button 
+              <div className="grid grid-cols-2 gap-2">
+                <button
                   onClick={() => copyToClipboard(userInfo.email, '邮箱')}
-                  className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-50 text-gray-400 hover:bg-blue-50 hover:text-[#007AFF] active:scale-90 transition-all"
-                  title="复制邮箱"
+                  disabled={!userInfo.email}
+                  className="px-3 py-3 bg-white/90 border border-gray-200/80 rounded-xl transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed hover:border-indigo-300 hover:bg-indigo-50/50 active:scale-[0.97] touch-manipulation group shadow-sm"
                 >
-                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <svg className="w-4 h-4 text-gray-600 group-hover:text-indigo-600 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
                   </svg>
+                  <span className="text-xs font-semibold text-gray-700 group-hover:text-indigo-700 transition-colors">复制</span>
                 </button>
-                {/* 复制接码地址 */}
-                <button 
+                <button
                   onClick={() => copyToClipboard(`https://yopmail.com?${userInfo.email}`, '接码地址')}
-                  className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-50 text-gray-400 hover:bg-purple-50 hover:text-purple-600 active:scale-90 transition-all"
-                  title="复制接码地址"
+                  disabled={!userInfo.email}
+                  className="px-3 py-3 bg-gradient-to-br from-indigo-500 to-indigo-600 border border-indigo-600/50 rounded-2xl transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed hover:from-indigo-600 hover:to-indigo-700 active:scale-[0.97] touch-manipulation shadow-md shadow-indigo-200/50"
                 >
-                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
                   </svg>
+                  <span className="text-xs font-semibold text-white">接码</span>
                 </button>
               </div>
             </div>
           </div>
-        </section>
+        </div>
 
-        {/* 底部操作按钮 */}
-        <section className="pt-4 pb-8">
-          <button 
-            onClick={generate}
-            className="w-full h-[52px] bg-[#007AFF] hover:bg-[#0062CC] active:scale-[0.98] transition-all rounded-full flex items-center justify-center gap-2 text-white font-semibold text-[17px] shadow-lg shadow-[#007AFF]/25"
+        <div className="mt-8 text-center space-y-4">
+          <a
+            href="https://t.me/fang180"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2.5 px-6 py-3 bg-gradient-to-r from-[#0088CC] to-[#0077B5] text-white rounded-2xl font-semibold text-sm transition-all shadow-lg shadow-cyan-200/50 hover:shadow-xl hover:shadow-cyan-300/60 active:scale-[0.97] touch-manipulation group"
           >
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-            </svg>
-            生成新身份
-          </button>
-          
-          <a 
-            href="https://t.me/fang180" 
-            target="_blank" 
-            className="mt-4 w-full h-[52px] bg-white ring-1 ring-black/5 hover:bg-gray-50 active:scale-[0.98] transition-all rounded-full flex items-center justify-center gap-2 text-[#0088CC] font-semibold text-[16px]"
-          >
-            <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+            <svg className="w-5 h-5 group-hover:rotate-12 transition-transform" viewBox="0 0 24 24" fill="currentColor">
               <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69a.2.2 0 00-.05-.18c-.06-.05-.14-.03-.21-.02-.09.02-1.49.95-4.22 2.79-.4.27-.76.41-1.08.4-.36-.01-1.04-.2-1.55-.37-.63-.2-1.12-.31-1.08-.66.02-.18.27-.36.74-.55 2.92-1.27 4.86-2.11 5.83-2.51 2.78-1.16 3.35-1.36 3.73-1.36.08 0 .27.02.39.12.1.08.13.19.14.27-.01.06.01.24 0 .24z"/>
             </svg>
-            加入 Telegram 频道
+            <span>Telegram 频道</span>
           </a>
-          
-          <div className="mt-8 text-center">
-            <p className="text-[11px] text-gray-400 font-medium">Designed by Fang180</p>
+          <div className="flex items-center justify-center gap-2">
+            <div className="h-px w-12 bg-gradient-to-r from-transparent to-gray-300"></div>
+            <p className="text-gray-400 text-xs font-medium">版本 1.0 • @fang180</p>
+            <div className="h-px w-12 bg-gradient-to-l from-transparent to-gray-300"></div>
           </div>
-        </section>
-
+        </div>
       </main>
 
-      {/* Toast Notification (灵动岛风格) */}
-      <div className="fixed top-4 left-0 right-0 z-50 flex flex-col items-center gap-2 pointer-events-none px-4">
+      <div className="fixed top-4 right-4 z-50 space-y-2 max-w-[calc(100vw-2rem)]">
         {toasts.map((toast) => (
-          <div
-            key={toast.id}
-            style={{
-              animation: 'slideDownFade 0.5s cubic-bezier(0.19, 1, 0.22, 1)'
-            }}
-            className="bg-black/80 backdrop-blur-xl px-4 py-3 rounded-[24px] shadow-[0_8px_20px_rgba(0,0,0,0.15)] flex items-center gap-3 min-w-[180px] max-w-[90%] justify-center border border-white/10"
-          >
-            {toast.type === 'success' && <div className="w-5 h-5 rounded-full bg-[#34C759] flex items-center justify-center text-white text-[10px]">✓</div>}
-            {toast.type === 'error' && <div className="w-5 h-5 rounded-full bg-[#FF3B30] flex items-center justify-center text-white text-[10px]">✕</div>}
-            <span className="text-white text-[14px] font-medium tracking-wide">{toast.message}</span>
+          <div key={toast.id} className="bg-white/95 backdrop-blur-2xl border border-gray-200/80 px-4 py-3 rounded-2xl shadow-xl flex items-center gap-3 animate-slide-in">
+            <div className={`w-1.5 h-1.5 rounded-full ${toast.type === 'success' ? 'bg-emerald-500 shadow-lg shadow-emerald-200' : 'bg-rose-500 shadow-lg shadow-rose-200'}`}></div>
+            <span className="text-gray-800 text-sm font-medium truncate">{toast.message}</span>
           </div>
         ))}
       </div>
 
-      {/* Country Selection Modal (iOS Sheet 风格) */}
       {showCountrySelect && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
-          <div 
-            className="absolute inset-0 bg-black/20 backdrop-blur-[2px] transition-opacity" 
-            onClick={() => setShowCountrySelect(false)}
-          ></div>
-          <div 
-            className="relative w-full max-w-md bg-[#F2F2F7] rounded-t-[20px] sm:rounded-[20px] shadow-2xl overflow-hidden h-[85vh] flex flex-col"
-            style={{
-              animation: 'slideUpFade 0.4s cubic-bezier(0.32, 0.725, 0, 1)'
-            }}
-          >
-            {/* Modal Header */}
-            <div className="px-4 py-3 bg-white/80 backdrop-blur-md border-b border-gray-200/50 sticky top-0 z-10 flex items-center justify-between">
-              <button 
-                onClick={() => setShowCountrySelect(false)}
-                className="text-[#007AFF] text-[16px] font-regular px-2 active:opacity-50 transition-opacity"
-              >
-                取消
-              </button>
-              <span className="font-semibold text-[17px]">选择地区</span>
-              <div className="w-[40px]"></div> {/* Spacer for centering */}
-            </div>
-            
-            {/* Search Bar */}
-            <div className="p-3 bg-white border-b border-gray-100">
-              <div className="relative group">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <svg className="w-4 h-4 text-gray-400 group-focus-within:text-gray-600 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                  </svg>
+        <div className="fixed inset-0 z-50 flex items-end justify-center animate-fade-in">
+          <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-black/30 to-black/40 backdrop-blur-sm" onClick={handleCloseCountrySelect}></div>
+          <div className="relative w-full max-w-lg bg-white/95 backdrop-blur-2xl rounded-t-3xl shadow-2xl border-t border-x border-gray-200/80 overflow-hidden max-h-[80vh] flex flex-col animate-slide-up">
+            <div className="p-5 border-b border-gray-200/60 flex-shrink-0">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <div className="w-1 h-6 bg-gradient-to-b from-indigo-500 to-purple-600 rounded-full"></div>
+                  <h3 className="text-lg font-bold text-gray-900">选择地区</h3>
                 </div>
-                  <input 
-                  type="text" 
-                  placeholder="搜索国家或代码" 
-                  className="block w-full bg-[#767680]/10 rounded-[10px] py-2 pl-9 pr-4 text-[16px] placeholder-gray-500 focus:outline-none focus:bg-[#767680]/15 focus:ring-0 transition-all caret-[#007AFF]"
+                <button onClick={handleCloseCountrySelect} className="text-gray-400 hover:text-gray-600 p-2 rounded-xl transition-all hover:bg-gray-100/80 active:scale-95 touch-manipulation">
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+              <div className="relative">
+                <svg className="absolute left-3.5 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+                <input
+                  type="text"
+                  placeholder="搜索国家或地区..."
+                  className="w-full bg-gray-50/80 border border-gray-200/80 rounded-xl pl-10 pr-4 py-3 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all font-medium"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
+                  autoFocus
                 />
               </div>
             </div>
-
-            {/* List */}
-            <div className="overflow-y-auto flex-1 bg-white">
-              {countries.filter(c => c.name.includes(searchQuery) || c.code.includes(searchQuery)).map((country) => (
+            <div className="flex-1 overflow-y-auto overscroll-contain" style={{WebkitOverflowScrolling: 'touch'}}>
+              {filteredCountries.map((country, index) => (
                 <button
                   key={country.code}
-                  onClick={() => {
-                    setSelectedCountry(country);
-                    setShowCountrySelect(false);
-                  }}
-                  className="w-full flex items-center gap-3 px-4 py-3.5 border-b border-gray-100 last:border-0 hover:bg-gray-50 active:bg-gray-100 transition-colors"
+                  onClick={() => handleSelectCountry(country)}
+                  className={`w-full flex items-center gap-3 px-5 py-4 transition-all touch-manipulation group hover:bg-indigo-50/50 ${
+                    index !== filteredCountries.length - 1 ? 'border-b border-gray-100/80' : ''
+                  }`}
                 >
-                  <span className="text-2xl shadow-sm rounded-sm overflow-hidden">{country.flag}</span>
-                  <span className="flex-1 text-left text-[17px] text-gray-900">{country.name}</span>
-                  <span className="text-gray-400 text-[15px] font-mono">{country.phonePrefix}</span>
+                  <div className="text-3xl flex-shrink-0 transform group-hover:scale-110 transition-transform">{country.flag}</div>
+                  <div className="flex-1 text-left min-w-0">
+                    <div className="font-semibold text-gray-900 text-sm truncate group-hover:text-indigo-700 transition-colors">{country.name}</div>
+                    <div className="text-xs text-gray-500 font-medium mt-0.5">{country.phonePrefix}</div>
+                  </div>
                   {selectedCountry.code === country.code && (
-                    <svg className="w-5 h-5 text-[#007AFF]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                    </svg>
+                    <div className="w-6 h-6 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center shadow-lg shadow-indigo-200/50 flex-shrink-0">
+                      <svg className="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                      </svg>
+                    </div>
                   )}
                 </button>
               ))}
@@ -444,45 +358,49 @@ export default function FBAssistant() {
       )}
 
       <style jsx>{`
-        @keyframes slideDownFade {
-          0% { opacity: 0; transform: translateY(-20px) scale(0.95); }
-          100% { opacity: 1; transform: translateY(0) scale(1); }
-        }
-        @keyframes slideUpFade {
-          0% { transform: translateY(100%); }
-          100% { transform: translateY(0); }
-        }
+        @keyframes slide-in { from { transform: translateX(120%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        @keyframes slide-up { from { transform: translateY(100%); } to { transform: translateY(0); } }
+        @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+        .animate-slide-in { animation: slide-in 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); }
+        .animate-slide-up { animation: slide-up 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); }
+        .animate-fade-in { animation: fade-in 0.3s ease-out; }
       `}</style>
     </div>
   );
 }
 
-// 提取的行组件，保持代码整洁
-function InfoRow({ label, value, icon, isMono = false, isLast = false, onCopy }: any) {
+const DataField = ({ label, value, icon, color = 'indigo', mono = false, onCopy }: any) => {
+  const colorClasses = {
+    indigo: 'from-indigo-400 to-indigo-600 shadow-indigo-200/50',
+    purple: 'from-purple-400 to-purple-600 shadow-purple-200/50',
+    pink: 'from-pink-400 to-pink-600 shadow-pink-200/50',
+    blue: 'from-blue-400 to-blue-600 shadow-blue-200/50',
+    emerald: 'from-emerald-400 to-emerald-600 shadow-emerald-200/50',
+  }[color];
+
   return (
-    <>
-      <div className="flex items-center justify-between p-3 pl-4 pr-3 bg-white hover:bg-gray-50 transition-colors group">
-        <div className="flex items-center gap-3 flex-1 min-w-0">
-          <div className="w-7 h-7 rounded-[7px] bg-gray-100 text-gray-500 flex items-center justify-center text-sm">
-            {icon}
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="text-[11px] text-gray-500 font-medium mb-0.5">{label}</div>
-            <div className={`text-[16px] text-gray-900 truncate select-all ${isMono ? 'font-mono tracking-tight' : ''}`}>
-              {value}
+    <div className="bg-gradient-to-br from-white/95 to-white/80 backdrop-blur-2xl border border-gray-200/80 rounded-2xl p-4 shadow-md hover:shadow-lg transition-all group">
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2.5 mb-2">
+            <div className={`w-8 h-8 bg-gradient-to-br ${colorClasses} rounded-xl flex items-center justify-center shadow-md transform group-hover:scale-110 transition-transform`}>
+              <span className="text-lg">{icon}</span>
             </div>
+            <span className="text-xs text-gray-600 font-bold uppercase tracking-wider">{label}</span>
+          </div>
+          <div className={`text-gray-900 truncate ${mono ? 'font-mono text-sm bg-gray-50/80 rounded-lg px-3 py-1.5 border border-gray-100' : 'text-sm font-semibold'}`}>
+            {value}
           </div>
         </div>
-        <button 
+        <button
           onClick={onCopy}
-          className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-50 text-gray-400 hover:bg-white hover:shadow-sm hover:text-[#007AFF] active:scale-90 transition-all ring-1 ring-transparent hover:ring-gray-100"
+          className="p-2.5 bg-white/90 border border-gray-200/80 rounded-xl transition-all hover:border-indigo-300 hover:bg-indigo-50/50 active:scale-95 flex-shrink-0 touch-manipulation group/btn shadow-sm"
         >
-          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <svg className="w-4 h-4 text-gray-600 group-hover/btn:text-indigo-600 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
           </svg>
         </button>
       </div>
-      {!isLast && <div className="ml-[52px] h-[0.5px] bg-gray-200"></div>}
-    </>
+    </div>
   );
-}
+};
