@@ -50,7 +50,7 @@ export default function FakerGenerator() {
   const showToast = useCallback((message: string, type: 'success' | 'error' | 'info' = 'success') => {
     const id = ++toastIdRef.current;
     setToasts(prev => [...prev, { id, message, type }]);
-    setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 2500);
+    setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 1500);
   }, []);
 
   const copyToClipboard = useCallback(async (text: string, label: string) => {
@@ -290,10 +290,10 @@ export default function FakerGenerator() {
         </div>
       </main>
 
-      <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 space-y-2 w-full max-w-xs px-4">
+      <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 space-y-2 w-full max-w-[240px] px-4">
         {toasts.map((toast) => (
-          <div key={toast.id} className="bg-white/95 backdrop-blur-2xl border border-gray-200/80 px-4 py-3 rounded-2xl shadow-xl flex items-center justify-center gap-3 animate-slide-down mx-auto">
-            <div className={`w-1.5 h-1.5 rounded-full ${toast.type === 'success' ? 'bg-emerald-500 shadow-lg shadow-emerald-200' : 'bg-rose-500 shadow-lg shadow-rose-200'}`}></div>
+          <div key={toast.id} className="bg-white/95 backdrop-blur-2xl border border-gray-200/80 px-4 py-2.5 rounded-xl shadow-xl flex items-center justify-center gap-2.5 animate-slide-down mx-auto">
+            <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${toast.type === 'success' ? 'bg-emerald-500' : 'bg-rose-500'}`}></div>
             <span className="text-gray-800 text-sm font-medium truncate">{toast.message}</span>
           </div>
         ))}
