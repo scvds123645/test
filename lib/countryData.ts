@@ -3,39 +3,38 @@ export interface CountryConfig {
   name: string;  
   phonePrefix: string;  
   phoneFormat: string;  
-  flag: string;  
 }  
   
 export const countries: CountryConfig[] = [  
-  { code: 'CN', name: '中国', phonePrefix: '+86', phoneFormat: '1XXXXXXXXXX', flag: '🇨🇳' },  
-  { code: 'HK', name: '香港', phonePrefix: '+852', phoneFormat: 'XXXX XXXX', flag: '🇭🇰' },  
-  { code: 'TW', name: '台灣', phonePrefix: '+886', phoneFormat: 'XXXX XXX XXX', flag: '🇹🇼' },  
-  { code: 'MO', name: '澳門', phonePrefix: '+853', phoneFormat: 'XXXX XXXX', flag: '🇲🇴' },  
-  { code: 'SG', name: '新加坡', phonePrefix: '+65', phoneFormat: 'XXXX XXXX', flag: '🇸🇬' },  
-  { code: 'US', name: '美国', phonePrefix: '+1', phoneFormat: 'XXX-XXX-XXXX', flag: '🇺🇸' },  
-  { code: 'JP', name: '日本', phonePrefix: '+81', phoneFormat: 'XX-XXXX-XXXX', flag: '🇯🇵' },  
-  { code: 'GB', name: '英国', phonePrefix: '+44', phoneFormat: 'XXXX XXX XXX', flag: '🇬🇧' },  
-  { code: 'DE', name: '德国', phonePrefix: '+49', phoneFormat: 'XXX XXXXXXXX', flag: '🇩🇪' },  
-  { code: 'FR', name: '法国', phonePrefix: '+33', phoneFormat: 'X XX XX XX XX', flag: '🇫🇷' },  
-  { code: 'KR', name: '韩国', phonePrefix: '+82', phoneFormat: 'XX-XXXX-XXXX', flag: '🇰🇷' },  
-  { code: 'CA', name: '加拿大', phonePrefix: '+1', phoneFormat: 'XXX-XXX-XXXX', flag: '🇨🇦' },  
-  { code: 'AU', name: '澳大利亚', phonePrefix: '+61', phoneFormat: 'XXX XXX XXX', flag: '🇦🇺' },  
-  { code: 'IT', name: '意大利', phonePrefix: '+39', phoneFormat: 'XXX XXX XXXX', flag: '🇮🇹' },  
-  { code: 'ES', name: '西班牙', phonePrefix: '+34', phoneFormat: 'XXX XX XX XX', flag: '🇪🇸' },  
-  { code: 'BR', name: '巴西', phonePrefix: '+55', phoneFormat: 'XX XXXXX-XXXX', flag: '🇧🇷' },  
-  { code: 'RU', name: '俄罗斯', phonePrefix: '+7', phoneFormat: 'XXX XXX-XX-XX', flag: '🇷🇺' },  
-  { code: 'IN', name: '印度', phonePrefix: '+91', phoneFormat: 'XXXXX XXXXX', flag: '🇮🇳' },  
-  { code: 'MX', name: '墨西哥', phonePrefix: '+52', phoneFormat: 'XXX XXX XXXX', flag: '🇲🇽' },  
-  { code: 'NL', name: '荷兰', phonePrefix: '+31', phoneFormat: 'X XXXXXXXX', flag: '🇳🇱' },  
-  { code: 'SE', name: '瑞典', phonePrefix: '+46', phoneFormat: 'XX-XXX XX XX', flag: '🇸🇪' },  
-  { code: 'CH', name: '瑞士', phonePrefix: '+41', phoneFormat: 'XX XXX XX XX', flag: '🇨🇭' },  
-  { code: 'PL', name: '波兰', phonePrefix: '+48', phoneFormat: 'XXX XXX XXX', flag: '🇵🇱' },  
-  { code: 'TR', name: '土耳其', phonePrefix: '+90', phoneFormat: 'XXX XXX XX XX', flag: '🇹🇷' },  
-  { code: 'TH', name: '泰国', phonePrefix: '+66', phoneFormat: 'XX XXX XXXX', flag: '🇹🇭' },  
-  { code: 'MY', name: '马来西亚', phonePrefix: '+60', phoneFormat: 'XX-XXX XXXX', flag: '🇲🇾' },  
-  { code: 'ID', name: '印度尼西亚', phonePrefix: '+62', phoneFormat: 'XXX-XXX-XXXX', flag: '🇮🇩' },  
-  { code: 'PH', name: '菲律宾', phonePrefix: '+63', phoneFormat: 'XXX XXX XXXX', flag: '🇵🇭' },  
-  { code: 'VN', name: '越南', phonePrefix: '+84', phoneFormat: 'XXX XXX XXXX', flag: '🇻🇳' },  
+  { code: 'CN', name: '中国', phonePrefix: '+86', phoneFormat: '1XXXXXXXXXX' },  
+  { code: 'HK', name: '香港', phonePrefix: '+852', phoneFormat: 'XXXX XXXX' },  
+  { code: 'TW', name: '台灣', phonePrefix: '+886', phoneFormat: 'XXXX XXX XXX' },  
+  { code: 'MO', name: '澳門', phonePrefix: '+853', phoneFormat: 'XXXX XXXX' },  
+  { code: 'SG', name: '新加坡', phonePrefix: '+65', phoneFormat: 'XXXX XXXX' },  
+  { code: 'US', name: '美国', phonePrefix: '+1', phoneFormat: 'XXX-XXX-XXXX' },  
+  { code: 'JP', name: '日本', phonePrefix: '+81', phoneFormat: 'XX-XXXX-XXXX' },  
+  { code: 'GB', name: '英国', phonePrefix: '+44', phoneFormat: 'XXXX XXX XXX' },  
+  { code: 'DE', name: '德国', phonePrefix: '+49', phoneFormat: 'XXX XXXXXXXX' },  
+  { code: 'FR', name: '法国', phonePrefix: '+33', phoneFormat: 'X XX XX XX XX' },  
+  { code: 'KR', name: '韩国', phonePrefix: '+82', phoneFormat: 'XX-XXXX-XXXX' },  
+  { code: 'CA', name: '加拿大', phonePrefix: '+1', phoneFormat: 'XXX-XXX-XXXX' },  
+  { code: 'AU', name: '澳大利亚', phonePrefix: '+61', phoneFormat: 'XXX XXX XXX' },  
+  { code: 'IT', name: '意大利', phonePrefix: '+39', phoneFormat: 'XXX XXX XXXX' },  
+  { code: 'ES', name: '西班牙', phonePrefix: '+34', phoneFormat: 'XXX XX XX XX' },  
+  { code: 'BR', name: '巴西', phonePrefix: '+55', phoneFormat: 'XX XXXXX-XXXX' },  
+  { code: 'RU', name: '俄罗斯', phonePrefix: '+7', phoneFormat: 'XXX XXX-XX-XX' },  
+  { code: 'IN', name: '印度', phonePrefix: '+91', phoneFormat: 'XXXXX XXXXX' },  
+  { code: 'MX', name: '墨西哥', phonePrefix: '+52', phoneFormat: 'XXX XXX XXXX' },  
+  { code: 'NL', name: '荷兰', phonePrefix: '+31', phoneFormat: 'X XXXXXXXX' },  
+  { code: 'SE', name: '瑞典', phonePrefix: '+46', phoneFormat: 'XX-XXX XX XX' },  
+  { code: 'CH', name: '瑞士', phonePrefix: '+41', phoneFormat: 'XX XXX XX XX' },  
+  { code: 'PL', name: '波兰', phonePrefix: '+48', phoneFormat: 'XXX XXX XXX' },  
+  { code: 'TR', name: '土耳其', phonePrefix: '+90', phoneFormat: 'XXX XXX XX XX' },  
+  { code: 'TH', name: '泰国', phonePrefix: '+66', phoneFormat: 'XX XXX XXXX' },  
+  { code: 'MY', name: '马来西亚', phonePrefix: '+60', phoneFormat: 'XX-XXX XXXX' },  
+  { code: 'ID', name: '印度尼西亚', phonePrefix: '+62', phoneFormat: 'XXX-XXX-XXXX' },  
+  { code: 'PH', name: '菲律宾', phonePrefix: '+63', phoneFormat: 'XXX XXX XXXX' },  
+  { code: 'VN', name: '越南', phonePrefix: '+84', phoneFormat: 'XXX XXX XXXX' },  
 ];  
   
 export const namesByCountry: Record<string, { firstNames: string[], lastNames: string[] }> = {  
@@ -86,7 +85,7 @@ export const namesByCountry: Record<string, { firstNames: string[], lastNames: s
       '羅', '高', '葉', '朱', '鍾', '盧', '潘', '謝', '曾', '鄧'  
     ],  
   },
-  // 新加坡 - 简体中文（新加坡官方使用简体）
+  // 新加坡 - 简体中文(新加坡官方使用简体)
   SG: {  
     firstNames: [  
       'Wei Ming', 'Jun Hao', 'Kai Wen', 'Jia Wei', 'Zhi Hao', 'Wei Jie', 'Jun Wei', 'Kai Yang',  
@@ -198,5 +197,20 @@ export const namesByCountry: Record<string, { firstNames: string[], lastNames: s
       'Kumar', 'Singh', 'Sharma', 'Patel', 'Gupta', 'Verma', 'Reddy', 'Rao', 'Joshi', 'Mehta',  
       'Desai', 'Shah', 'Kapoor', 'Chopra', 'Malhotra', 'Agarwal', 'Bansal', 'Goyal', 'Jain', 'Khanna'  
     ],  
-  },  
+  },
+  // 其他国家使用美国名字作为后备
+  CA: { firstNames: ['James', 'Mary', 'John', 'Patricia'], lastNames: ['Smith', 'Johnson', 'Williams'] },
+  AU: { firstNames: ['James', 'Mary', 'John', 'Patricia'], lastNames: ['Smith', 'Johnson', 'Williams'] },
+  IT: { firstNames: ['James', 'Mary', 'John', 'Patricia'], lastNames: ['Smith', 'Johnson', 'Williams'] },
+  ES: { firstNames: ['James', 'Mary', 'John', 'Patricia'], lastNames: ['Smith', 'Johnson', 'Williams'] },
+  BR: { firstNames: ['James', 'Mary', 'John', 'Patricia'], lastNames: ['Smith', 'Johnson', 'Williams'] },
+  MX: { firstNames: ['James', 'Mary', 'John', 'Patricia'], lastNames: ['Smith', 'Johnson', 'Williams'] },
+  NL: { firstNames: ['James', 'Mary', 'John', 'Patricia'], lastNames: ['Smith', 'Johnson', 'Williams'] },
+  SE: { firstNames: ['James', 'Mary', 'John', 'Patricia'], lastNames: ['Smith', 'Johnson', 'Williams'] },
+  CH: { firstNames: ['James', 'Mary', 'John', 'Patricia'], lastNames: ['Smith', 'Johnson', 'Williams'] },
+  PL: { firstNames: ['James', 'Mary', 'John', 'Patricia'], lastNames: ['Smith', 'Johnson', 'Williams'] },
+  TR: { firstNames: ['James', 'Mary', 'John', 'Patricia'], lastNames: ['Smith', 'Johnson', 'Williams'] },
+  MY: { firstNames: ['James', 'Mary', 'John', 'Patricia'], lastNames: ['Smith', 'Johnson', 'Williams'] },
+  ID: { firstNames: ['James', 'Mary', 'John', 'Patricia'], lastNames: ['Smith', 'Johnson', 'Williams'] },
+  PH: { firstNames: ['James', 'Mary', 'John', 'Patricia'], lastNames: ['Smith', 'Johnson', 'Williams'] },
 };
