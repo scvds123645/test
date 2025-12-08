@@ -369,21 +369,32 @@ export default function FakerGenerator() {
   );
 }
 
-const DataField = ({ label, value, icon, color = 'indigo', mono = false, onCopy }: any) => {
-  const colorClasses = {
+interface DataFieldProps {
+  label: string;
+  value: string;
+  icon: string;
+  color?: 'indigo' | 'purple' | 'pink' | 'blue' | 'emerald';
+  mono?: boolean;
+  onCopy: () => void;
+}
+
+const DataField = ({ label, value, icon, color = 'indigo', mono = false, onCopy }: DataFieldProps) => {
+  const colorClasses: Record<string, string> = {
     indigo: 'from-indigo-400 to-indigo-600 shadow-indigo-200/50',
     purple: 'from-purple-400 to-purple-600 shadow-purple-200/50',
     pink: 'from-pink-400 to-pink-600 shadow-pink-200/50',
     blue: 'from-blue-400 to-blue-600 shadow-blue-200/50',
     emerald: 'from-emerald-400 to-emerald-600 shadow-emerald-200/50',
-  }[color];
+  };
+  
+  const selectedColor = colorClasses[color] || colorClasses.indigo;
 
   return (
     <div className="bg-gradient-to-br from-white/95 to-white/80 backdrop-blur-2xl border border-gray-200/80 rounded-2xl p-4 shadow-md hover:shadow-lg transition-all group">
       <div className="flex items-center justify-between gap-3">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2.5 mb-2">
-            <div className={`w-8 h-8 bg-gradient-to-br ${colorClasses} rounded-xl flex items-center justify-center shadow-md transform group-hover:scale-110 transition-transform`}>
+            <div className={`w-8 h-8 bg-gradient-to-br ${selectedColor} rounded-xl flex items-center justify-center shadow-md transform group-hover:scale-110 transition-transform`}>
               <span className="text-lg">{icon}</span>
             </div>
             <span className="text-xs text-gray-600 font-bold uppercase tracking-wider">{label}</span>
