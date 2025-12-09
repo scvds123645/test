@@ -125,92 +125,92 @@ export const namesByCountry: Record<string, { firstNames: string[], lastNames: s
       'Marie', 'Sophie', 'Maria', 'Sophia', 'Emilia', 'Emma', 'Hannah', 'Anna', 'Mia', 'Luisa'  
     ],  
     lastNames: [  
-      'Müller', 'Schmidt', 'Schneider', 'Fischer', 'Weber', 'Meyer', 'Wagner', 'Becker', 'Schulz', 'Hoffmann',  
-      'Schäfer', 'Koch', 'Bauer', 'Richter', 'Klein', 'Wolf', 'Schröder', 'Neumann', 'Schwarz', 'Zimmermann'  
-    ],  
-  },
-  FR: {  
-    firstNames: [  
-      'Gabriel', 'Léo', 'Raphaël', 'Arthur', 'Louis', 'Lucas', 'Adam', 'Jules', 'Hugo', 'Maël',  
-      'Jade', 'Louise', 'Emma', 'Ambre', 'Alice', 'Alba', 'Rose', 'Anna', 'Mia', 'Romy'  
-    ],  
-    lastNames: [  
-      'Martin', 'Bernard', 'Thomas', 'Petit', 'Robert', 'Richard', 'Durand', 'Dubois', 'Moreau', 'Laurent',  
-      'Simon', 'Michel', 'Lefebvre', 'Leroy', 'Roux', 'David', 'Bertrand', 'Morel', 'Fournier', 'Girard'  
-    ],  
-  },
-  RU: {  
-    firstNames: [  
-      'Alexander', 'Mikhail', 'Maxim', 'Ivan', 'Artem', 'Dmitry', 'Daniil', 'Mark', 'Lev', 'Matvey',  
-      'Sofia', 'Maria', 'Anna', 'Alice', 'Victoria', 'Polina', 'Eva', 'Elizaveta', 'Arina', 'Varvara'  
-    ],  
-    lastNames: [  
-      'Ivanov', 'Smirnov', 'Kuznetsov', 'Popov', 'Vasilyev', 'Petrov', 'Sokolov', 'Mikhailov', 'Novikov', 'Fedorov',  
-      'Morozov', 'Volkov', 'Alekseev', 'Lebedev', 'Semenov', 'Egorov', 'Pavlov', 'Kozlov', 'Stepanov', 'Nikolaev'  
-    ],  
-  },
-  JP: {  
-    firstNames: [  
-      '太郎', '一郎', '健太', '翔', '大輔', '健', '誠', '拓也', '大樹', '裕太',  
-      '花子', '美咲', '桜', '結衣', '七海', '陽菜', '愛', '結菜', '美月', '莉子'  
-    ],  
-    lastNames: [  
-      '佐藤', '鈴木', '高橋', '田中', '渡辺', '伊藤', '山本', '中村', '小林', '加藤',  
-      '吉田', '山田', '佐々木', '山口', '松本', '井上', '木村', '林', '斎藤', '清水'  
-    ],  
-  },  
-  KR: {  
-    firstNames: [  
-      '민준', '서준', '예준', '도윤', '시우', '주원', '하준', '지호', '준서', '건우',  
-      '서연', '서윤', '지우', '서현', '민서', '하은', '하윤', '윤서', '지유', '지민'  
-    ],  
-    lastNames: [  
-      '김', '이', '박', '최', '정', '강', '조', '윤', '장', '임',  
-      '한', '오', '서', '신', '권', '황', '안', '송', '류', '전'  
-    ],  
-  },  
-  VN: {  
-    firstNames: [  
-      'Minh', 'Khang', 'Phuc', 'Tuan', 'Hung', 'Quan', 'Huy', 'Dung', 'Khanh', 'Bao',  
-      'Linh', 'Huong', 'Trang', 'Hoa', 'Anh', 'Ngoc', 'Phuong', 'Mai', 'Lan', 'Thu'  
-    ],  
-    lastNames: [  
-      'Nguyen', 'Tran', 'Le', 'Pham', 'Hoang', 'Phan', 'Vu', 'Vo', 'Dang', 'Bui'  
-    ],  
-  },  
-  TH: {  
-    firstNames: [  
-      'Somchai', 'Somsak', 'Surasak', 'Prasit', 'Wichai', 'Sompong', 'Narong', 'Pradit', 'Suchart', 'Thawee',  
-      'Somying', 'Siriporn', 'Saowanee', 'Sumalee', 'Siriwan', 'Pensri', 'Wilaiwan', 'Pimchanok', 'Rattana', 'Suchada'  
-    ],  
-    lastNames: [  
-      'Siriwat', 'Chaiyaporn', 'Rattanakorn', 'Phuangphiphat', 'Thongchai', 'Jaturong', 'Komsawat', 'Nithipong',  
-      'Pattanasin', 'Raksanti', 'Suwannarat', 'Thanawat', 'Wongsuwan', 'Apiraksakul', 'Boonyarat', 'Chaiyanon'  
-    ],  
-  },  
-  IN: {  
-    firstNames: [  
-      'Rahul', 'Amit', 'Raj', 'Rohan', 'Arjun', 'Vikram', 'Karan', 'Aditya', 'Ravi', 'Suresh',  
-      'Priya', 'Anjali', 'Sneha', 'Pooja', 'Kavita', 'Neha', 'Ritu', 'Sunita', 'Anita', 'Preeti'  
-    ],  
-    lastNames: [  
-      'Kumar', 'Singh', 'Sharma', 'Patel', 'Gupta', 'Verma', 'Reddy', 'Rao', 'Joshi', 'Mehta',  
-      'Desai', 'Shah', 'Kapoor', 'Chopra', 'Malhotra', 'Agarwal', 'Bansal', 'Goyal', 'Jain', 'Khanna'  
-    ],  
-  },
-  // 其他国家使用美国名字作为后备
-  CA: { firstNames: ['James', 'Mary', 'John', 'Patricia'], lastNames: ['Smith', 'Johnson', 'Williams'] },
-  AU: { firstNames: ['James', 'Mary', 'John', 'Patricia'], lastNames: ['Smith', 'Johnson', 'Williams'] },
-  IT: { firstNames: ['James', 'Mary', 'John', 'Patricia'], lastNames: ['Smith', 'Johnson', 'Williams'] },
-  ES: { firstNames: ['James', 'Mary', 'John', 'Patricia'], lastNames: ['Smith', 'Johnson', 'Williams'] },
-  BR: { firstNames: ['James', 'Mary', 'John', 'Patricia'], lastNames: ['Smith', 'Johnson', 'Williams'] },
-  MX: { firstNames: ['James', 'Mary', 'John', 'Patricia'], lastNames: ['Smith', 'Johnson', 'Williams'] },
-  NL: { firstNames: ['James', 'Mary', 'John', 'Patricia'], lastNames: ['Smith', 'Johnson', 'Williams'] },
-  SE: { firstNames: ['James', 'Mary', 'John', 'Patricia'], lastNames: ['Smith', 'Johnson', 'Williams'] },
-  CH: { firstNames: ['James', 'Mary', 'John', 'Patricia'], lastNames: ['Smith', 'Johnson', 'Williams'] },
-  PL: { firstNames: ['James', 'Mary', 'John', 'Patricia'], lastNames: ['Smith', 'Johnson', 'Williams'] },
-  TR: { firstNames: ['James', 'Mary', 'John', 'Patricia'], lastNames: ['Smith', 'Johnson', 'Williams'] },
-  MY: { firstNames: ['James', 'Mary', 'John', 'Patricia'], lastNames: ['Smith', 'Johnson', 'Williams'] },
-  ID: { firstNames: ['James', 'Mary', 'John', 'Patricia'], lastNames: ['Smith', 'Johnson', 'Williams'] },
-  PH: { firstNames: ['James', 'Mary', 'John', 'Patricia'], lastNames: ['Smith', 'Johnson', 'Williams'] },
+      'Müller', 'Schmidt', 'Schneider', 'Fischer', 'Weber', 'Meyer', 'Wagner', 'Becker', 'Schulz', 'Hoffmann',
+'Schäfer', 'Koch', 'Bauer', 'Richter', 'Klein', 'Wolf', 'Schröder', 'Neumann', 'Schwarz', 'Zimmermann'
+],
+},
+FR: {
+firstNames: [
+'Gabriel', 'Léo', 'Raphaël', 'Arthur', 'Louis', 'Lucas', 'Adam', 'Jules', 'Hugo', 'Maël',
+'Jade', 'Louise', 'Emma', 'Ambre', 'Alice', 'Alba', 'Rose', 'Anna', 'Mia', 'Romy'
+],
+lastNames: [
+'Martin', 'Bernard', 'Thomas', 'Petit', 'Robert', 'Richard', 'Durand', 'Dubois', 'Moreau', 'Laurent',
+'Simon', 'Michel', 'Lefebvre', 'Leroy', 'Roux', 'David', 'Bertrand', 'Morel', 'Fournier', 'Girard'
+],
+},
+RU: {
+firstNames: [
+'Alexander', 'Mikhail', 'Maxim', 'Ivan', 'Artem', 'Dmitry', 'Daniil', 'Mark', 'Lev', 'Matvey',
+'Sofia', 'Maria', 'Anna', 'Alice', 'Victoria', 'Polina', 'Eva', 'Elizaveta', 'Arina', 'Varvara'
+],
+lastNames: [
+'Ivanov', 'Smirnov', 'Kuznetsov', 'Popov', 'Vasilyev', 'Petrov', 'Sokolov', 'Mikhailov', 'Novikov', 'Fedorov',
+'Morozov', 'Volkov', 'Alekseev', 'Lebedev', 'Semenov', 'Egorov', 'Pavlov', 'Kozlov', 'Stepanov', 'Nikolaev'
+],
+},
+JP: {
+firstNames: [
+'太郎', '一郎', '健太', '翔', '大輔', '健', '誠', '拓也', '大樹', '裕太',
+'花子', '美咲', '桜', '結衣', '七海', '陽菜', '愛', '結菜', '美月', '莉子'
+],
+lastNames: [
+'佐藤', '鈴木', '高橋', '田中', '渡辺', '伊藤', '山本', '中村', '小林', '加藤',
+'吉田', '山田', '佐々木', '山口', '松本', '井上', '木村', '林', '斎藤', '清水'
+],
+},
+KR: {
+firstNames: [
+'민준', '서준', '예준', '도윤', '시우', '주원', '하준', '지호', '준서', '건우',
+'서연', '서윤', '지우', '서현', '민서', '하은', '하윤', '윤서', '지유', '지민'
+],
+lastNames: [
+'김', '이', '박', '최', '정', '강', '조', '윤', '장', '임',
+'한', '오', '서', '신', '권', '황', '안', '송', '류', '전'
+],
+},
+VN: {
+firstNames: [
+'Minh', 'Khang', 'Phuc', 'Tuan', 'Hung', 'Quan', 'Huy', 'Dung', 'Khanh', 'Bao',
+'Linh', 'Huong', 'Trang', 'Hoa', 'Anh', 'Ngoc', 'Phuong', 'Mai', 'Lan', 'Thu'
+],
+lastNames: [
+'Nguyen', 'Tran', 'Le', 'Pham', 'Hoang', 'Phan', 'Vu', 'Vo', 'Dang', 'Bui'
+],
+},
+TH: {
+firstNames: [
+'Somchai', 'Somsak', 'Surasak', 'Prasit', 'Wichai', 'Sompong', 'Narong', 'Pradit', 'Suchart', 'Thawee',
+'Somying', 'Siriporn', 'Saowanee', 'Sumalee', 'Siriwan', 'Pensri', 'Wilaiwan', 'Pimchanok', 'Rattana', 'Suchada'
+],
+lastNames: [
+'Siriwat', 'Chaiyaporn', 'Rattanakorn', 'Phuangphiphat', 'Thongchai', 'Jaturong', 'Komsawat', 'Nithipong',
+'Pattanasin', 'Raksanti', 'Suwannarat', 'Thanawat', 'Wongsuwan', 'Apiraksakul', 'Boonyarat', 'Chaiyanon'
+],
+},
+IN: {
+firstNames: [
+'Rahul', 'Amit', 'Raj', 'Rohan', 'Arjun', 'Vikram', 'Karan', 'Aditya', 'Ravi', 'Suresh',
+'Priya', 'Anjali', 'Sneha', 'Pooja', 'Kavita', 'Neha', 'Ritu', 'Sunita', 'Anita', 'Preeti'
+],
+lastNames: [
+'Kumar', 'Singh', 'Sharma', 'Patel', 'Gupta', 'Verma', 'Reddy', 'Rao', 'Joshi', 'Mehta',
+'Desai', 'Shah', 'Kapoor', 'Chopra', 'Malhotra', 'Agarwal', 'Bansal', 'Goyal', 'Jain', 'Khanna'
+],
+},
+// 其他国家使用美国名字作为后备
+CA: { firstNames: ['James', 'Mary', 'John', 'Patricia', 'Robert', 'Jennifer', 'Michael', 'Linda'], lastNames: ['Smith', 'Johnson', 'Williams', 'Brown', 'Jones'] },
+AU: { firstNames: ['James', 'Mary', 'John', 'Patricia', 'Robert', 'Jennifer', 'Michael', 'Linda'], lastNames: ['Smith', 'Johnson', 'Williams', 'Brown', 'Jones'] },
+IT: { firstNames: ['James', 'Mary', 'John', 'Patricia', 'Robert', 'Jennifer', 'Michael', 'Linda'], lastNames: ['Smith', 'Johnson', 'Williams', 'Brown', 'Jones'] },
+ES: { firstNames: ['James', 'Mary', 'John', 'Patricia', 'Robert', 'Jennifer', 'Michael', 'Linda'], lastNames: ['Smith', 'Johnson', 'Williams', 'Brown', 'Jones'] },
+BR: { firstNames: ['James', 'Mary', 'John', 'Patricia', 'Robert', 'Jennifer', 'Michael', 'Linda'], lastNames: ['Smith', 'Johnson', 'Williams', 'Brown', 'Jones'] },
+MX: { firstNames: ['James', 'Mary', 'John', 'Patricia', 'Robert', 'Jennifer', 'Michael', 'Linda'], lastNames: ['Smith', 'Johnson', 'Williams', 'Brown', 'Jones'] },
+NL: { firstNames: ['James', 'Mary', 'John', 'Patricia', 'Robert', 'Jennifer', 'Michael', 'Linda'], lastNames: ['Smith', 'Johnson', 'Williams', 'Brown', 'Jones'] },
+SE: { firstNames: ['James', 'Mary', 'John', 'Patricia', 'Robert', 'Jennifer', 'Michael', 'Linda'], lastNames: ['Smith', 'Johnson', 'Williams', 'Brown', 'Jones'] },
+CH: { firstNames: ['James', 'Mary', 'John', 'Patricia', 'Robert', 'Jennifer', 'Michael', 'Linda'], lastNames: ['Smith', 'Johnson', 'Williams', 'Brown', 'Jones'] },
+PL: { firstNames: ['James', 'Mary', 'John', 'Patricia', 'Robert', 'Jennifer', 'Michael', 'Linda'], lastNames: ['Smith', 'Johnson', 'Williams', 'Brown', 'Jones'] },
+TR: { firstNames: ['James', 'Mary', 'John', 'Patricia', 'Robert', 'Jennifer', 'Michael', 'Linda'], lastNames: ['Smith', 'Johnson', 'Williams', 'Brown', 'Jones'] },
+MY: { firstNames: ['James', 'Mary', 'John', 'Patricia', 'Robert', 'Jennifer', 'Michael', 'Linda'], lastNames: ['Smith', 'Johnson', 'Williams', 'Brown', 'Jones'] },
+ID: { firstNames: ['James', 'Mary', 'John', 'Patricia', 'Robert', 'Jennifer', 'Michael', 'Linda'], lastNames: ['Smith', 'Johnson', 'Williams', 'Brown', 'Jones'] },
+PH: { firstNames: ['James', 'Mary', 'John', 'Patricia', 'Robert', 'Jennifer', 'Michael', 'Linda'], lastNames: ['Smith', 'Johnson', 'Williams', 'Brown', 'Jones'] },
 };
