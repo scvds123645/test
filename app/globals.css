@@ -9,7 +9,6 @@ body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  /* 移动端优化 */
   -webkit-tap-highlight-color: transparent;
   touch-action: manipulation;
   overscroll-behavior: none;
@@ -104,8 +103,12 @@ img, svg {
   user-select: none;
 }
 
-/* 旋转动画 - 确保优先级和兼容性 */
-@keyframes spinner {
+/* ============================================
+   🔧 修复:旋转动画 - 增强移动端兼容性
+   ============================================ */
+
+/* 标准旋转动画 */
+@keyframes spinner-rotate {
   0% {
     transform: rotate(0deg);
   }
@@ -114,7 +117,8 @@ img, svg {
   }
 }
 
-@-webkit-keyframes spinner {
+/* WebKit 浏览器旋转动画 */
+@-webkit-keyframes spinner-rotate {
   0% {
     -webkit-transform: rotate(0deg);
     transform: rotate(0deg);
@@ -125,9 +129,20 @@ img, svg {
   }
 }
 
-.spinner {
-  animation: spinner 0.8s linear infinite;
-  -webkit-animation: spinner 0.8s linear infinite;
+/* 应用旋转动画的类 */
+.spinner-animation {
+  animation: spinner-rotate 0.8s linear infinite !important;
+  -webkit-animation: spinner-rotate 0.8s linear infinite !important;
+  transform-origin: center center;
+  -webkit-transform-origin: center center;
+  will-change: transform;
+}
+
+/* 确保 SVG 元素也能正确旋转 */
+svg.spinner-animation {
+  display: inline-block;
+  animation: spinner-rotate 0.8s linear infinite !important;
+  -webkit-animation: spinner-rotate 0.8s linear infinite !important;
 }
 
 /* 移动端动画优化 */
@@ -177,14 +192,14 @@ img, svg {
 /* 移动端点击区域优化 */
 @media (max-width: 640px) {
   button, a {
-    min-height: 44px; /* iOS 推荐的最小触摸目标 */
+    min-height: 44px;
   }
 }
 
 /* 优化移动端输入体验 */
 @media (max-width: 640px) {
   input, textarea, select {
-    font-size: 16px; /* 防止 iOS Safari 缩放 */
+    font-size: 16px;
   }
 }
 
@@ -201,14 +216,9 @@ img, svg {
   }
 }
 
-/* 深色模式支持(可选) */
-@media (prefers-color-scheme: dark) {
-  /* 如需深色模式,可在此添加样式 */
-}
-
 /* 减少动画(用户偏好) */
 @media (prefers-reduced-motion: reduce) {
-  * {
+  *:not(.spinner-animation) {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;

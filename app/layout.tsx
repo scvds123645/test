@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "脸书小助手@fang180",
+  title: "脸书小助手",
   description: "专为 Facebook 注册设计的身份生成工具，智能生成符合真实用户特征的姓名、生日、手机号、邮箱等信息，支持全球100+国家地区，提高账号注册成功率",
   keywords: "Facebook创号,FB注册助手,Facebook账号生成器,FB身份生成,社交媒体注册工具,Facebook注册信息,临时邮箱,测试账号",
   viewport: "width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no",
@@ -12,7 +12,7 @@ export const metadata: Metadata = {
     title: "FB创号小助手"
   },
   openGraph: {
-    title: "脸书小助手@fang180",
+    title: "脸书小助手",
     description: "快速生成符合 Facebook 用户特征的真实身份信息，支持全球地区",
     type: "website",
   },

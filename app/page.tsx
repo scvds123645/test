@@ -63,6 +63,30 @@ const Icon = memo(({ type, className = "w-5 h-5" }: { type: string; className?: 
 
 Icon.displayName = 'Icon';
 
+// 🔧 修复:加载动画组件 - 确保旋转效果正确显示
+const LoadingSpinner = memo(() => {
+  return (
+    <svg 
+      className="w-5 h-5 spinner-animation" 
+      viewBox="0 0 24 24"
+      style={{ display: 'inline-block' }}
+    >
+      <circle
+        cx="12"
+        cy="12"
+        r="10"
+        stroke="currentColor"
+        strokeWidth="3"
+        fill="none"
+        strokeDasharray="31.4 31.4"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+});
+
+LoadingSpinner.displayName = 'LoadingSpinner';
+
 // 简化的数据字段组件 - 移动端优化
 const DataField = memo(({ label, value, color, mono, onCopy }: {
   label: string;
@@ -311,27 +335,12 @@ export default function FakerGenerator() {
                 disabled={isGenerating}
                 className="w-full bg-[#1877F2] hover:bg-[#166FE5] text-white rounded-xl px-6 py-4 font-semibold text-base flex items-center justify-center gap-2.5 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg shadow-blue-500/30"
               >
-                  {isGenerating ? (
-                    <>
-                      <svg 
-                        className="w-5 h-5" 
-                        style={{ animation: 'spinner 0.8s linear infinite' }}
-                        viewBox="0 0 24 24"
-                      >
-                        <circle
-                          cx="12"
-                          cy="12"
-                          r="10"
-                          stroke="currentColor"
-                          strokeWidth="3"
-                          fill="none"
-                          strokeDasharray="31.4 31.4"
-                          strokeLinecap="round"
-                        />
-                      </svg>
-                      <span>创号中...</span>
-                    </>
-                  ) : (
+                {isGenerating ? (
+                  <>
+                    <LoadingSpinner />
+                    <span>创号中...</span>
+                  </>
+                ) : (
                   <>
                     <Icon type="play" className="w-5 h-5" />
                     <span>开始创号</span>
@@ -373,22 +382,7 @@ export default function FakerGenerator() {
                 >
                   {isGenerating ? (
                     <>
-                      <svg 
-                        className="w-5 h-5" 
-                        style={{ animation: 'spinner 0.8s linear infinite' }}
-                        viewBox="0 0 24 24"
-                      >
-                        <circle
-                          cx="12"
-                          cy="12"
-                          r="10"
-                          stroke="currentColor"
-                          strokeWidth="3"
-                          fill="none"
-                          strokeDasharray="31.4 31.4"
-                          strokeLinecap="round"
-                        />
-                      </svg>
+                      <LoadingSpinner />
                       <span>生成中</span>
                     </>
                   ) : (
