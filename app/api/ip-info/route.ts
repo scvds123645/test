@@ -37,8 +37,6 @@ interface IPInfoResponse {
   country?: string;
   loc?: string;
   timezone?: string;
-  postal?: string;
-  org?: string;
 }
 
 // 优化：将静态正则和数组移出处理函数，避免重复创建
@@ -91,43 +89,7 @@ export async function GET(request: NextRequest) {
     });
   }
 
-  // 方案 1: ipinfo.io with token (第一优先级)
-  try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 5000);
-    
-    const response = await fetch(`https://ipinfo.io/${ip}?token=b64c7c7254ac78`, {
-      headers: COMMON_HEADERS,
-      signal: controller.signal
-    });
-    
-    clearTimeout(timeoutId);
-    
-    if (response.ok) {
-      const data: IPInfoResponse = await response.json();
-      
-      if (data.country) {
-        const [lat, lon] = data.loc?.split(',').map(Number) || [null, null];
-        
-        return NextResponse.json({
-          source: 'ipinfo-token',
-          ip: data.ip || ip,
-          country: data.country,
-          countryName: data.country,
-          city: data.city || '',
-          region: data.region || '',
-          timezone: data.timezone || '',
-          latitude: lat,
-          longitude: lon,
-          accurate: true
-        });
-      }
-    }
-  } catch (error) {
-    console.error('ipinfo.io (with token) 请求失败:', error);
-  }
-
-  // 方案 2: ipapi.co (第二优先级)
+  // 方案 1: ipapi.co (第一优先级)
   try {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 5000);
@@ -161,7 +123,7 @@ export async function GET(request: NextRequest) {
     console.error('ipapi.co 请求失败:', error);
   }
 
-  // 方案 3: ipinfo.io (第三优先级)
+  // 方案 2: ipinfo.io (第二优先级)
   try {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 5000);
@@ -197,7 +159,7 @@ export async function GET(request: NextRequest) {
     console.error('ipinfo.io 请求失败:', error);
   }
 
-  // 方案 4: ipwho.is (第四优先级)
+  // 方案 3: ipwho.is (第三优先级)
   try {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 5000);
@@ -231,7 +193,7 @@ export async function GET(request: NextRequest) {
     console.error('ipwho.is 请求失败:', error);
   }
 
-  // 方案 5: ip-api.com (第五优先级/兜底)
+  // 方案 4: ip-api.com (第四优先级/兜底)
   try {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 5000);
