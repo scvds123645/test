@@ -37,15 +37,8 @@ interface IPInfoResponse {
   country?: string;
   loc?: string;
   timezone?: string;
-}
-
-interface PikPakResponse {
-  result?: string;
-  message?: string;
-  data?: {
-    countryCode?: string;
-    ip?: string;
-  };
+  postal?: string;
+  org?: string;
 }
 
 // 优化：将静态正则和数组移出处理函数，避免重复创建
@@ -98,12 +91,12 @@ export async function GET(request: NextRequest) {
     });
   }
 
-  // 方案 1: PikPak API (第一优先级)
+  // 方案 1: ipinfo.io with token (第一优先级)
   try {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 5000);
     
-    const response = await fetch('https://api-drive.mypikpak.com/drive/v1/privilege/area_country_code', {
+    const response = await fetch(`https://ipinfo.io/${ip}?token=b64c7c7254ac78`, {
       headers: COMMON_HEADERS,
       signal: controller.signal
     });
@@ -111,25 +104,27 @@ export async function GET(request: NextRequest) {
     clearTimeout(timeoutId);
     
     if (response.ok) {
-      const data: PikPakResponse = await response.json();
+      const data: IPInfoResponse = await response.json();
       
-      if (data.result === 'ACCEPTED' && data.data?.countryCode) {
+      if (data.country) {
+        const [lat, lon] = data.loc?.split(',').map(Number) || [null, null];
+        
         return NextResponse.json({
-          source: 'pikpak',
-          ip: data.data.ip || ip,
-          country: data.data.countryCode,
-          countryName: data.data.countryCode,
-          city: '',
-          region: '',
-          timezone: '',
-          latitude: null,
-          longitude: null,
+          source: 'ipinfo-token',
+          ip: data.ip || ip,
+          country: data.country,
+          countryName: data.country,
+          city: data.city || '',
+          region: data.region || '',
+          timezone: data.timezone || '',
+          latitude: lat,
+          longitude: lon,
           accurate: true
         });
       }
     }
   } catch (error) {
-    console.error('PikPak API 请求失败:', error);
+    console.error('ipinfo.io (with token) 请求失败:', error);
   }
 
   // 方案 2: ipapi.co (第二优先级)
