@@ -104,7 +104,7 @@ img, svg {
   user-select: none;
 }
 
-/* 旋转动画 - 确保优先级 */
+/* 旋转动画 - 确保优先级和兼容性 */
 @keyframes spinner {
   0% {
     transform: rotate(0deg);
@@ -114,8 +114,20 @@ img, svg {
   }
 }
 
+@-webkit-keyframes spinner {
+  0% {
+    -webkit-transform: rotate(0deg);
+    transform: rotate(0deg);
+  }
+  100% {
+    -webkit-transform: rotate(360deg);
+    transform: rotate(360deg);
+  }
+}
+
 .spinner {
   animation: spinner 0.8s linear infinite;
+  -webkit-animation: spinner 0.8s linear infinite;
 }
 
 /* 移动端动画优化 */

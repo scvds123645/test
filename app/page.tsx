@@ -311,12 +311,27 @@ export default function FakerGenerator() {
                 disabled={isGenerating}
                 className="w-full bg-[#1877F2] hover:bg-[#166FE5] text-white rounded-xl px-6 py-4 font-semibold text-base flex items-center justify-center gap-2.5 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg shadow-blue-500/30"
               >
-                {isGenerating ? (
-                  <>
-                    <div className="spinner w-5 h-5 border-2 border-white border-t-transparent rounded-full"></div>
-                    <span>创号中...</span>
-                  </>
-                ) : (
+                  {isGenerating ? (
+                    <>
+                      <svg 
+                        className="w-5 h-5" 
+                        style={{ animation: 'spinner 0.8s linear infinite' }}
+                        viewBox="0 0 24 24"
+                      >
+                        <circle
+                          cx="12"
+                          cy="12"
+                          r="10"
+                          stroke="currentColor"
+                          strokeWidth="3"
+                          fill="none"
+                          strokeDasharray="31.4 31.4"
+                          strokeLinecap="round"
+                        />
+                      </svg>
+                      <span>创号中...</span>
+                    </>
+                  ) : (
                   <>
                     <Icon type="play" className="w-5 h-5" />
                     <span>开始创号</span>
@@ -358,7 +373,22 @@ export default function FakerGenerator() {
                 >
                   {isGenerating ? (
                     <>
-                      <div className="spinner w-5 h-5 border-2 border-white border-t-transparent rounded-full"></div>
+                      <svg 
+                        className="w-5 h-5" 
+                        style={{ animation: 'spinner 0.8s linear infinite' }}
+                        viewBox="0 0 24 24"
+                      >
+                        <circle
+                          cx="12"
+                          cy="12"
+                          r="10"
+                          stroke="currentColor"
+                          strokeWidth="3"
+                          fill="none"
+                          strokeDasharray="31.4 31.4"
+                          strokeLinecap="round"
+                        />
+                      </svg>
                       <span>生成中</span>
                     </>
                   ) : (
