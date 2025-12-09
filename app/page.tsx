@@ -270,7 +270,7 @@ export default function AppleStylePage() {
                   onClick={() => { 
                     haptic(); 
                     const emailName = userInfo.email.split('@')[0];
-                    window.open(`https://yopmail.com/?login=${emailName}`, '_blank');
+                    window.open(`https://yopmail.com?login=${emailName}`, '_blank');
                   }}
                   className="w-full py-2.5 text-sm font-semibold text-sf-blue bg-sf-blue/10 hover:bg-sf-blue/20 rounded-lg transition-all active:scale-95"
                 >
