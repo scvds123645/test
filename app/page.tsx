@@ -21,7 +21,7 @@ interface UserInfo {
   email: string;
 }
 
-// 优化：将图标路径提取为静态常量，避免每次渲染都重新创建对象
+// 优化1: 提取 SVG 图标为静态对象,避免重复创建
 const ICON_PATHS: Record<string, React.ReactElement> = {
   refresh: <path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/>,
   copy: <path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/>,
@@ -34,13 +34,15 @@ const ICON_PATHS: Record<string, React.ReactElement> = {
   sparkles: <path d="M7 11v2l-4 1 4 1v2l1-4-1-4zm5-7v4l-3 1 3 1v4l2-5-2-5zm5.66 2.94L15 6.26l.66-2.94L18.34 6l2.66.68-2.66.68-.68 2.58-.66-2.94zM15 18l-2-3 2-3 2 3-2 3z"/>,
 };
 
+// 优化2: 使用 memo 缓存 Icon 组件
 const Icon = memo(({ name, className = "w-6 h-6" }: { name: string; className?: string }) => {
-    return (<svg className={className} viewBox="0 0 24 24" fill="currentColor">{ICON_PATHS[name]}</svg>);
+  return (<svg className={className} viewBox="0 0 24 24" fill="currentColor">{ICON_PATHS[name]}</svg>);
 });
 Icon.displayName = 'Icon';
 
 const haptic = () => { if (typeof navigator !== 'undefined' && 'vibrate' in navigator) { navigator.vibrate(10); } };
 
+// 优化3: 使用 memo 缓存 InfoRow 组件
 const InfoRow = memo(({ label, value, onCopy }: {
   label: string;
   value: string;
@@ -120,39 +122,51 @@ export default function AppleStylePage() {
     }
   }, [showToast]);
 
+  // 优化4: 使用 useCallback 缓存 generate 函数
   const generate = useCallback(() => {
     if (isGenerating) return;
     
     haptic();
     setIsGenerating(true);
     
-    try {
-      const { firstName, lastName } = generateName(selectedCountry.code);
-      const birthday = generateBirthday();
-      const phone = generatePhone(selectedCountry);
-      const password = generatePassword();
-      
-      const customDomain = selectedDomain === 'random' ? undefined : selectedDomain;
-      const email = generateEmail(firstName, lastName, customDomain);
-      
-      setUserInfo({
-        firstName,
-        lastName,
-        birthday,
-        phone,
-        password,
-        email
-      });
-      
-      showToast('已生成新信息');
-    } catch (error) {
-      console.error('生成失败:', error);
-      showToast('生成失败,请重试');
-    } finally {
-      setIsGenerating(false);
+    // 优化5: 使用 requestIdleCallback 在浏览器空闲时生成数据
+    const generateData = () => {
+      try {
+        const { firstName, lastName } = generateName(selectedCountry.code);
+        const birthday = generateBirthday();
+        const phone = generatePhone(selectedCountry);
+        const password = generatePassword();
+        
+        const customDomain = selectedDomain === 'random' ? undefined : selectedDomain;
+        const email = generateEmail(firstName, lastName, customDomain);
+        
+        setUserInfo({
+          firstName,
+          lastName,
+          birthday,
+          phone,
+          password,
+          email
+        });
+        
+        showToast('已生成新信息');
+      } catch (error) {
+        console.error('生成失败:', error);
+        showToast('生成失败,请重试');
+      } finally {
+        setIsGenerating(false);
+      }
+    };
+
+    // 使用 requestIdleCallback 或 setTimeout 作为回退
+    if ('requestIdleCallback' in window) {
+      requestIdleCallback(generateData, { timeout: 100 });
+    } else {
+      setTimeout(generateData, 0);
     }
   }, [selectedCountry, selectedDomain, showToast, isGenerating]);
 
+  // 优化6: 初始化逻辑优化
   useEffect(() => {
     let isMounted = true;
     
@@ -207,10 +221,10 @@ export default function AppleStylePage() {
     }
   }, [selectedCountry.code]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const allDomains = getAllDomains();
+  // 优化7: 使用 useMemo 缓存计算结果
+  const allDomains = useMemo(() => getAllDomains(), []);
   const displayDomain = selectedDomain === 'random' ? '随机域名' : selectedDomain;
 
-  // 优化：使用 useMemo 缓存过滤结果，避免每次渲染都进行数组过滤
   const filteredDomains = useMemo(() => {
     if (!domainSearchQuery) return allDomains;
     const lowerQuery = domainSearchQuery.toLowerCase();
@@ -281,6 +295,16 @@ export default function AppleStylePage() {
             
             <div className="mt-8 space-y-4">
               <button
+                onClick={generate}
+                disabled={isGenerating}
+                className="w-full bg-sf-blue hover:bg-blue-600 text-white rounded-xl shadow-lg shadow-blue-500/30 active:scale-[0.98] transition-all p-4 text-center disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <span className="text-lg font-semibold tracking-wide">
+                  {isGenerating ? '生成中...' : '随机生成'}
+                </span>
+              </button>
+
+              <button
                 onClick={() => { haptic(); setShowCountrySheet(true); }}
                 className="w-full flex justify-between items-center bg-white rounded-xl shadow-sm border border-sf-gray-100 p-4 active:bg-sf-gray-50 transition-colors"
               >
@@ -300,16 +324,6 @@ export default function AppleStylePage() {
                   <span className="text-base font-medium">{displayDomain}</span>
                   <Icon name="expand" className="w-5 h-5 text-sf-gray-300" />
                 </div>
-              </button>
-              
-              <button
-                onClick={generate}
-                disabled={isGenerating}
-                className="w-full bg-sf-blue hover:bg-blue-600 text-white rounded-xl shadow-lg shadow-blue-500/30 active:scale-[0.98] transition-all p-4 text-center disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <span className="text-lg font-semibold tracking-wide">
-                  {isGenerating ? '生成中...' : '随机生成'}
-                </span>
               </button>
             </div>
 
