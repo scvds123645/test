@@ -8,8 +8,8 @@ export interface CountryConfig {
 export const countries: CountryConfig[] = [  
   { code: 'CN', name: '中国', phonePrefix: '+86', phoneFormat: '1XXXXXXXXXX' },  
   { code: 'HK', name: '香港', phonePrefix: '+852', phoneFormat: 'XXXX XXXX' },  
-  { code: 'TW', name: '台灣', phonePrefix: '+886', phoneFormat: 'XXXX XXX XXX' },  
-  { code: 'MO', name: '澳門', phonePrefix: '+853', phoneFormat: 'XXXX XXXX' },  
+  { code: 'TW', name: '台湾', phonePrefix: '+886', phoneFormat: 'XXXX XXX XXX' },  
+  { code: 'MO', name: '澳门', phonePrefix: '+853', phoneFormat: 'XXXX XXXX' },  
   { code: 'SG', name: '新加坡', phonePrefix: '+65', phoneFormat: 'XXXX XXXX' },  
   { code: 'US', name: '美国', phonePrefix: '+1', phoneFormat: 'XXX-XXX-XXXX' },  
   { code: 'JP', name: '日本', phonePrefix: '+81', phoneFormat: 'XX-XXXX-XXXX' },  

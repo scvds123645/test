@@ -22,12 +22,6 @@ interface UserInfo {
   email: string;
 }
 
-interface ToastState {
-  id: number;      // 用于强制重渲染动画的唯一ID
-  msg: string;
-  visible: boolean;
-}
-
 // --- 图标组件 (SVG Paths) ---
 const ICON_PATHS: Record<string, React.ReactElement> = {
   check: <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>,
@@ -37,7 +31,8 @@ const ICON_PATHS: Record<string, React.ReactElement> = {
   search: <path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>,
   inbox: <path d="M19 3H4.99c-1.11 0-1.98.89-1.98 2L3 19c0 1.1.89 2 1.99 2H19c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 12h-4c0 1.66-1.35 3-3 3s-3-1.34-3-3H4.99V5H19v10z"/>,
   link: <path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z"/>,
-  copy: <path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/>
+  copy: <path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/>,
+  open: <path d="M19 19H5V5h7V3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2v-7h-2v7zM14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z"/>
 };
 
 const Icon = memo(({ name, className = "w-6 h-6" }: { name: string; className?: string }) => {
@@ -45,43 +40,53 @@ const Icon = memo(({ name, className = "w-6 h-6" }: { name: string; className?: 
 });
 Icon.displayName = 'Icon';
 
-// --- 工具函数 ---
-const haptic = () => { 
+// --- 工具函数: 震动反馈 ---
+const haptic = (duration: number = 15) => { 
   if (typeof navigator !== 'undefined' && 'vibrate' in navigator) { 
-    navigator.vibrate(15); // 稍微增加一点震动反馈，更清晰
+    navigator.vibrate(duration);
   } 
 };
 
-// --- 组件: 信息行 ---
-const InfoRow = memo(({ label, value, onCopy, isLast = false }: {
+// --- 组件: 信息行 (带内联反馈) ---
+const InfoRow = memo(({ label, value, onCopy, isCopied, isLast = false }: {
   label: string;
   value: string;
   onCopy: () => void;
+  isCopied: boolean;
   isLast?: boolean;
 }) => {
-  const [isActive, setIsActive] = useState(false);
-
-  const handleClick = useCallback(() => {
-    setIsActive(true);
-    onCopy();
-    setTimeout(() => setIsActive(false), 200);
-  }, [onCopy]);
-
   return (
     <div 
-      onClick={handleClick}
+      onClick={onCopy}
       className={`group relative flex items-center justify-between py-4 pl-5 pr-5 cursor-pointer transition-colors duration-200 touch-manipulation ${
-        isActive ? 'bg-gray-100/80' : 'bg-transparent hover:bg-gray-50/50'
+        isCopied ? 'bg-[#007AFF]/5' : 'bg-transparent hover:bg-gray-50/50 active:bg-gray-100'
       }`}
     >
       <span className="text-[15px] font-medium text-gray-400 w-20 shrink-0 tracking-tight">{label}</span>
-      <div className="flex items-center gap-3 min-w-0 flex-1 justify-end">
-        <span className={`text-[17px] font-medium truncate select-all tracking-tight transition-transform duration-200 ${
-          isActive ? 'scale-[0.98] text-gray-600' : 'text-gray-900'
-        }`}>
+      
+      <div className="flex items-center gap-3 min-w-0 flex-1 justify-end h-6 relative overflow-hidden">
+        {/* 正常数值 */}
+        <span 
+          className={`absolute right-0 text-[17px] font-medium truncate select-all tracking-tight transition-all duration-300 ${
+            isCopied ? 'opacity-0 translate-y-4 scale-95' : 'opacity-100 translate-y-0 scale-100 text-gray-900'
+          }`}
+        >
           {value || '---'}
         </span>
+
+        {/* 复制成功反馈 */}
+        <div 
+          className={`absolute right-0 flex items-center gap-1.5 transition-all duration-300 cubic-bezier-bounce ${
+            isCopied ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 -translate-y-4 scale-90 pointer-events-none'
+          }`}
+        >
+          <div className="bg-[#34C759] rounded-full p-0.5">
+            <Icon name="check" className="w-3 h-3 text-white stroke-[3px]" />
+          </div>
+          <span className="text-[15px] font-semibold text-[#34C759]">已复制</span>
+        </div>
       </div>
+      
       {!isLast && <div className="absolute bottom-0 left-5 right-0 h-[0.5px] bg-gray-200/80" />}
     </div>
   );
@@ -273,72 +278,97 @@ export default function AppleStylePage() {
   const [showCountrySheet, setShowCountrySheet] = useState(false);
   const [showDomainSheet, setShowDomainSheet] = useState(false);
   
-  // 优化后的 Toast 状态
-  const [toastState, setToastState] = useState<ToastState>({ id: 0, msg: '', visible: false });
-  
   const [ipInfo, setIpInfo] = useState({ ip: '...', country: 'US' });
   const [isInitialized, setIsInitialized] = useState(false);
-  const [isButtonActive, setIsButtonActive] = useState(false);
   
-  const toastTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const buttonTimerRef = useRef<NodeJS.Timeout | null>(null);
+  // 内联反馈状态
+  const [copiedField, setCopiedField] = useState<string | null>(null);
+  const [inboxStatus, setInboxStatus] = useState<'idle' | 'opening'>('idle');
+  
+  // 动画 Refs
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const successContentRef = useRef<HTMLDivElement>(null);
+  const normalContentRef = useRef<HTMLDivElement>(null);
+
+  const copyTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const inboxTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // --- Logic ---
   
-  // 核心优化：支持快速点击的 Toast 逻辑
-  const showToast = useCallback((msg: string) => {
-    // 1. 清除之前的定时器，防止旧的关闭操作影响新的 Toast
-    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
-    
-    // 2. 立即更新状态，使用 Date.now() 作为 ID 确保每次都是全新的渲染
-    // 这会触发 React 的 Key 变化，从而强制重启动画
-    setToastState({
-      id: Date.now(),
-      msg,
-      visible: true
-    });
-
-    // 3. 设置新的自动关闭定时器
-    toastTimerRef.current = setTimeout(() => {
-      setToastState(prev => ({ ...prev, visible: false }));
-    }, 2000);
-  }, []);
-
   const copyToClipboard = useCallback(async (text: string, label: string) => {
-    haptic();
+    haptic(30);
     try {
       await navigator.clipboard.writeText(text);
-      showToast(`${label} 已复制`);
+      if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
+      setCopiedField(label);
+      copyTimerRef.current = setTimeout(() => {
+        setCopiedField(null);
+      }, 1500);
     } catch {
-      showToast('复制失败');
+      haptic(50);
     }
-  }, [showToast]);
+  }, []);
+
+  const triggerAnimation = useCallback(() => {
+    // 使用 Ref 直接操作 DOM 类名，避免 React 渲染周期的延迟
+    const btn = buttonRef.current;
+    const successEl = successContentRef.current;
+    const normalEl = normalContentRef.current;
+
+    if (btn && successEl && normalEl) {
+      // 1. 重置动画状态 (移除类名)
+      btn.classList.remove('anim-bg-success');
+      successEl.classList.remove('anim-slide-success');
+      normalEl.classList.remove('anim-slide-normal');
+      
+      // 2. 强制浏览器回流 (Reflow) - 关键步骤，让浏览器意识到状态变化
+      void btn.offsetWidth; 
+
+      // 3. 添加动画类名，触发新动画
+      btn.classList.add('anim-bg-success');
+      successEl.classList.add('anim-slide-success');
+      normalEl.classList.add('anim-slide-normal');
+    }
+  }, []);
 
   const generate = useCallback(() => {
-    if (buttonTimerRef.current) clearTimeout(buttonTimerRef.current);
-    setIsButtonActive(true);
-    buttonTimerRef.current = setTimeout(() => setIsButtonActive(false), 150);
-
-    haptic();
+    haptic(50);
     
-    // 使用 setTimeout 将计算任务推迟到下一个事件循环，让 UI 先响应点击动画
-    setTimeout(() => {
-      try {
-        const { firstName, lastName } = generateName(selectedCountry.code);
-        const birthday = generateBirthday();
-        const phone = generatePhone(selectedCountry);
-        const password = generatePassword();
-        const customDomain = selectedDomain === 'random' ? undefined : selectedDomain;
-        const email = generateEmail(firstName, lastName, customDomain);
-        
-        setUserInfo({ firstName, lastName, birthday, phone, password, email });
-        showToast('已生成新身份');
-      } catch (error) {
-        console.error(error);
-        showToast('生成失败');
-      }
-    }, 10);
-  }, [selectedCountry, selectedDomain, showToast]);
+    // 清除复制状态
+    setCopiedField(null);
+    
+    // 触发动画
+    triggerAnimation();
+
+    // 立即生成数据
+    try {
+      const { firstName, lastName } = generateName(selectedCountry.code);
+      const birthday = generateBirthday();
+      const phone = generatePhone(selectedCountry);
+      const password = generatePassword();
+      const customDomain = selectedDomain === 'random' ? undefined : selectedDomain;
+      const email = generateEmail(firstName, lastName, customDomain);
+      
+      setUserInfo({ firstName, lastName, birthday, phone, password, email });
+    } catch (error) {
+      console.error(error);
+    }
+  }, [selectedCountry, selectedDomain, triggerAnimation]);
+
+  const handleInboxClick = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (inboxStatus === 'opening') return;
+
+    haptic(30);
+    setInboxStatus('opening');
+
+    const emailName = userInfo.email.split('@')[0];
+    
+    inboxTimerRef.current = setTimeout(() => {
+        window.open(`https://yopmail.com/?login=${emailName}`, '_blank');
+        setInboxStatus('idle');
+    }, 600);
+  }, [userInfo.email, inboxStatus]);
 
   // 初始化逻辑
   useEffect(() => {
@@ -391,13 +421,13 @@ export default function AppleStylePage() {
 
   // 处理 Sheet 选择
   const handleCountrySelect = useCallback((country: CountryConfig) => {
-    haptic();
+    haptic(20);
     setSelectedCountry(country);
     setShowCountrySheet(false);
   }, []);
 
   const handleDomainSelect = useCallback((domain: string) => {
-    haptic();
+    haptic(20);
     setSelectedDomain(domain);
     setShowDomainSheet(false);
   }, []);
@@ -426,52 +456,99 @@ export default function AppleStylePage() {
           <>
             {/* 核心信息卡片 */}
             <section className="bg-white rounded-[20px] overflow-hidden shadow-[0_8px_30px_rgb(0,0,0,0.04)] ring-1 ring-black/5 transform-gpu">
-              <InfoRow label="姓氏" value={userInfo.lastName} onCopy={() => copyToClipboard(userInfo.lastName, '姓氏')} />
-              <InfoRow label="名字" value={userInfo.firstName} onCopy={() => copyToClipboard(userInfo.firstName, '名字')} />
-              <InfoRow label="生日" value={userInfo.birthday} onCopy={() => copyToClipboard(userInfo.birthday, '生日')} />
-              <InfoRow label="手机号" value={userInfo.phone} onCopy={() => copyToClipboard(userInfo.phone, '手机号')} />
-              <InfoRow label="密码" value={userInfo.password} onCopy={() => copyToClipboard(userInfo.password, '密码')} />
+              <InfoRow label="姓氏" value={userInfo.lastName} onCopy={() => copyToClipboard(userInfo.lastName, '姓氏')} isCopied={copiedField === '姓氏'} />
+              <InfoRow label="名字" value={userInfo.firstName} onCopy={() => copyToClipboard(userInfo.firstName, '名字')} isCopied={copiedField === '名字'} />
+              <InfoRow label="生日" value={userInfo.birthday} onCopy={() => copyToClipboard(userInfo.birthday, '生日')} isCopied={copiedField === '生日'} />
+              <InfoRow label="手机号" value={userInfo.phone} onCopy={() => copyToClipboard(userInfo.phone, '手机号')} isCopied={copiedField === '手机号'} />
+              <InfoRow label="密码" value={userInfo.password} onCopy={() => copyToClipboard(userInfo.password, '密码')} isCopied={copiedField === '密码'} />
               
-              <div className="relative flex flex-col py-4 pl-5 pr-5 group active:bg-gray-50 transition-colors duration-200 touch-manipulation">
+              {/* 邮箱行 */}
+              <div className="relative flex flex-col py-4 pl-5 pr-5 group transition-colors duration-200">
                 <div 
-                  className="flex items-center justify-between mb-3 cursor-pointer" 
+                  className="flex items-center justify-between mb-3 cursor-pointer touch-manipulation" 
                   onClick={() => copyToClipboard(userInfo.email, '邮箱')}
                 >
                   <span className="text-[15px] font-medium text-gray-400 w-20 shrink-0 tracking-tight">邮箱</span>
-                  <span className="text-[17px] font-medium text-gray-900 truncate select-all flex-1 text-right tracking-tight">{userInfo.email}</span>
+                  
+                  <div className="flex items-center gap-3 min-w-0 flex-1 justify-end h-6 relative overflow-hidden">
+                    <span 
+                      className={`absolute right-0 text-[17px] font-medium truncate select-all tracking-tight transition-all duration-300 ${
+                        copiedField === '邮箱' ? 'opacity-0 translate-y-4 scale-95' : 'opacity-100 translate-y-0 scale-100 text-gray-900'
+                      }`}
+                    >
+                      {userInfo.email}
+                    </span>
+                    <div 
+                      className={`absolute right-0 flex items-center gap-1.5 transition-all duration-300 cubic-bezier-bounce ${
+                        copiedField === '邮箱' ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 -translate-y-4 scale-90 pointer-events-none'
+                      }`}
+                    >
+                      <div className="bg-[#34C759] rounded-full p-0.5">
+                        <Icon name="check" className="w-3 h-3 text-white stroke-[3px]" />
+                      </div>
+                      <span className="text-[15px] font-semibold text-[#34C759]">已复制</span>
+                    </div>
+                  </div>
                 </div>
                 
                 <div className="flex justify-end pt-1">
                   <button
-                    onClick={(e) => { 
-                      e.stopPropagation();
-                      haptic(); 
-                      const emailName = userInfo.email.split('@')[0];
-                      window.open(`https://yopmail.com/?login=${emailName}`, '_blank');
-                    }}
-                    className="inline-flex items-center gap-1.5 py-1.5 px-4 bg-[#007AFF]/10 hover:bg-[#007AFF]/20 text-[#007AFF] rounded-full text-[13px] font-semibold transition-all active:scale-95 active:bg-[#007AFF]/25 touch-manipulation"
+                    onClick={handleInboxClick}
+                    className={`inline-flex items-center gap-1.5 py-1.5 px-4 rounded-full text-[13px] font-semibold transition-all duration-300 active:scale-95 touch-manipulation overflow-hidden relative ${
+                        inboxStatus === 'opening' 
+                        ? 'bg-[#34C759]/10 text-[#34C759]' 
+                        : 'bg-[#007AFF]/10 hover:bg-[#007AFF]/20 text-[#007AFF] active:bg-[#007AFF]/25'
+                    }`}
                   >
-                    <Icon name="inbox" className="w-3.5 h-3.5" />
-                    查看收件箱
+                    <div className={`flex items-center gap-1.5 transition-all duration-300 ${inboxStatus === 'opening' ? '-translate-y-8 opacity-0' : 'translate-y-0 opacity-100'}`}>
+                        <Icon name="inbox" className="w-3.5 h-3.5" />
+                        查看收件箱
+                    </div>
+                    <div className={`absolute inset-0 flex items-center justify-center gap-1.5 transition-all duration-300 ${inboxStatus === 'opening' ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'}`}>
+                        <Icon name="open" className="w-3.5 h-3.5" />
+                        已打开
+                    </div>
                   </button>
                 </div>
               </div>
             </section>
 
-            {/* 主要操作按钮 */}
+            {/* 主要操作按钮 (使用 CSS Animation 优化连续点击) */}
             <button
+              ref={buttonRef}
               onClick={generate}
               disabled={!isInitialized}
-              className={`w-full py-4 bg-gradient-to-b from-[#007AFF] to-[#0062CC] text-white rounded-[18px] shadow-[0_4px_14px_rgba(0,118,255,0.39)] border-t border-white/20 transition-all duration-200 cubic-bezier(0.25, 0.1, 0.25, 1) flex items-center justify-center gap-2.5 transform-gpu touch-manipulation ${
-                isButtonActive 
-                  ? 'scale-[0.96] brightness-90 shadow-none' 
-                  : 'scale-100 hover:scale-[1.01] hover:brightness-105'
-              }`}
+              className="w-full py-4 rounded-[18px] shadow-[0_4px_14px_rgba(0,0,0,0.1)] border-t border-white/20 flex items-center justify-center gap-2.5 transform-gpu touch-manipulation overflow-hidden relative active:scale-[0.96] active:brightness-90 bg-gradient-to-b from-[#007AFF] to-[#0062CC] hover:scale-[1.01] hover:brightness-105 transition-transform duration-100"
             >
-              <Icon name="sparkles" className="w-5 h-5 text-white/90" />
-              <span className="text-[17px] font-semibold tracking-tight text-white drop-shadow-sm">
-                生成新身份
-              </span>
+              {/* 正常状态内容: 初始状态居中 */}
+              <div 
+                ref={normalContentRef}
+                className="absolute flex items-center gap-2.5 translate-y-0 opacity-100 scale-100"
+              >
+                  <Icon name="sparkles" className="w-5 h-5 text-white/90" />
+                  <span className="text-[17px] font-semibold tracking-tight text-white drop-shadow-sm">
+                    生成新身份
+                  </span>
+              </div>
+
+              {/* 成功状态内容: 初始状态在下方 (translate-y-8) 且透明 */}
+              <div 
+                ref={successContentRef}
+                className="absolute flex items-center gap-2.5 translate-y-8 opacity-0 scale-100"
+              >
+                   <div className="bg-white/20 rounded-full p-1">
+                      <Icon name="check" className="w-5 h-5 text-white stroke-[3px]" />
+                   </div>
+                   <span className="text-[17px] font-semibold tracking-tight text-white">
+                    已生成
+                  </span>
+              </div>
+              
+              {/* 占位符保持高度 */}
+              <div className="opacity-0 pointer-events-none flex items-center gap-2.5">
+                  <Icon name="sparkles" className="w-5 h-5" />
+                  <span className="text-[17px] font-semibold">生成新身份</span>
+              </div>
             </button>
 
             {/* 设置区域 */}
@@ -479,24 +556,24 @@ export default function AppleStylePage() {
               <div className="pl-5 mb-2 text-[13px] font-medium text-gray-400 uppercase tracking-wide">生成设置</div>
               <div className="bg-white rounded-[18px] overflow-hidden shadow-sm ring-1 ring-black/5 transform-gpu">
                 <button
-                  onClick={() => { haptic(); setShowCountrySheet(true); }}
-                  className="w-full flex items-center justify-between py-4 pl-5 pr-4 active:bg-gray-100 transition-colors group touch-manipulation"
+                  onClick={() => { haptic(20); setShowCountrySheet(true); }}
+                  className="w-full flex items-center justify-between py-4 pl-5 pr-4 active:bg-blue-50/50 transition-colors duration-200 group touch-manipulation"
                 >
                   <span className="text-[16px] font-medium text-gray-900 tracking-tight">选择地区</span>
                   <div className="flex items-center gap-2">
                     <span className="text-[16px] text-gray-500 tracking-tight">{selectedCountry.name}</span>
-                    <Icon name="chevronRight" className="w-4 h-4 text-gray-300 group-active:text-gray-400 transition-colors" />
+                    <Icon name="chevronRight" className="w-4 h-4 text-gray-300 group-active:text-gray-400 transition-transform duration-300 group-active:rotate-90" />
                   </div>
                 </button>
                 <div className="ml-5 h-[0.5px] bg-gray-200/80" />
                 <button
-                  onClick={() => { haptic(); setShowDomainSheet(true); }}
-                  className="w-full flex items-center justify-between py-4 pl-5 pr-4 active:bg-gray-100 transition-colors group touch-manipulation"
+                  onClick={() => { haptic(20); setShowDomainSheet(true); }}
+                  className="w-full flex items-center justify-between py-4 pl-5 pr-4 active:bg-blue-50/50 transition-colors duration-200 group touch-manipulation"
                 >
                   <span className="text-[16px] font-medium text-gray-900 tracking-tight">邮箱域名</span>
                   <div className="flex items-center gap-2">
                     <span className="text-[16px] text-gray-500 tracking-tight">{displayDomain}</span>
-                    <Icon name="chevronRight" className="w-4 h-4 text-gray-300 group-active:text-gray-400 transition-colors" />
+                    <Icon name="chevronRight" className="w-4 h-4 text-gray-300 group-active:text-gray-400 transition-transform duration-300 group-active:rotate-90" />
                   </div>
                 </button>
               </div>
@@ -520,25 +597,6 @@ export default function AppleStylePage() {
           </>
         )}
       </main>
-
-      {/* 
-        Toast 容器 
-        使用 key={toastState.id} 确保每次 id 变化时，React 都会卸载旧的 Toast 并挂载新的。
-        这会强制 CSS 动画从头开始播放，实现“连击”效果。
-      */}
-      {toastState.visible && (
-        <div 
-          key={toastState.id}
-          className="fixed bottom-10 left-1/2 -translate-x-1/2 z-50 pointer-events-none animate-toast-pop origin-center"
-        >
-          <div className="bg-gray-900/90 backdrop-blur-2xl text-white pl-4 pr-5 py-3 rounded-full shadow-[0_8px_30px_rgba(0,0,0,0.25)] flex items-center gap-3 min-w-[140px] justify-center border border-white/10 ring-1 ring-black/20">
-            <div className="bg-[#34C759] rounded-full p-0.5 shadow-[0_0_10px_rgba(52,199,89,0.4)]">
-              <Icon name="check" className="w-3.5 h-3.5 text-white stroke-[3px]" />
-            </div>
-            <span className="text-[15px] font-semibold tracking-tight whitespace-nowrap">{toastState.msg}</span>
-          </div>
-        </div>
-      )}
 
       {/* 国家选择 Sheet */}
       <BottomSheet 
@@ -575,14 +633,44 @@ export default function AppleStylePage() {
         @keyframes slide-up { from { transform: translateY(100%); } to { transform: translateY(0); } }
         .animate-slide-up { animation: slide-up 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
         
-        /* 新增：Toast 弹跳动画 (Spring Physics) */
-        @keyframes toast-pop {
-          0% { transform: translate(-50%, 20px) scale(0.9); opacity: 0; }
-          40% { transform: translate(-50%, 0) scale(1.05); opacity: 1; }
-          100% { transform: translate(-50%, 0) scale(1); opacity: 1; }
+        .cubic-bezier-bounce {
+          transition-timing-function: cubic-bezier(0.34, 1.56, 0.64, 1);
         }
-        .animate-toast-pop {
-          animation: toast-pop 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+
+        /* --- 按钮动画 Keyframes --- */
+        
+        /* 1. 按钮背景色动画 */
+        @keyframes btn-bg-success {
+          0% { background-color: #34C759; box-shadow: none; }
+          70% { background-color: #34C759; box-shadow: none; }
+          100% { background-color: #007AFF; } 
+        }
+        .anim-bg-success {
+          animation: btn-bg-success 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+          background-image: none !important; /* 动画期间移除渐变 */
+        }
+
+        /* 2. 正常内容循环动画 (退出 -> 恢复) */
+        @keyframes slide-normal-cycle {
+          0% { transform: translateY(0) scale(1); opacity: 1; }
+          20% { transform: translateY(-20px) scale(0.95); opacity: 0; } /* 向上滑出 */
+          80% { transform: translateY(20px) scale(0.95); opacity: 0; }  /* 重置到下方 */
+          100% { transform: translateY(0) scale(1); opacity: 1; }       /* 从下方滑入恢复 */
+        }
+        .anim-slide-normal {
+          animation: slide-normal-cycle 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+        }
+
+        /* 3. 成功内容循环动画 (进入 -> 退出) */
+        @keyframes slide-success-cycle {
+          0% { transform: translateY(20px) scale(0.9); opacity: 0; }    /* 初始在下方 */
+          25% { transform: translateY(0) scale(1.05); opacity: 1; }     /* 弹跳进入 (Overshoot) */
+          35% { transform: translateY(0) scale(1); opacity: 1; }        /* 稳定 */
+          75% { transform: translateY(0) scale(1); opacity: 1; }        /* 保持显示 */
+          100% { transform: translateY(-20px) scale(0.95); opacity: 0; }/* 向上滑出 */
+        }
+        .anim-slide-success {
+          animation: slide-success-cycle 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
         }
       `}</style>
     </div>
