@@ -22,6 +22,12 @@ interface UserInfo {
   email: string;
 }
 
+interface ToastState {
+  id: number;      // 用于强制重渲染动画的唯一ID
+  msg: string;
+  visible: boolean;
+}
+
 // --- 图标组件 (SVG Paths) ---
 const ICON_PATHS: Record<string, React.ReactElement> = {
   check: <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>,
@@ -42,7 +48,7 @@ Icon.displayName = 'Icon';
 // --- 工具函数 ---
 const haptic = () => { 
   if (typeof navigator !== 'undefined' && 'vibrate' in navigator) { 
-    navigator.vibrate(10); // 减少震动时长，提高响应感
+    navigator.vibrate(15); // 稍微增加一点震动反馈，更清晰
   } 
 };
 
@@ -202,7 +208,6 @@ const DomainList = memo(({
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   
-  // 搜索过滤优化
   const filteredDomains = useMemo(() => {
     if (!searchQuery) return allDomains;
     const lowerQuery = searchQuery.toLowerCase();
@@ -267,8 +272,10 @@ export default function AppleStylePage() {
   });
   const [showCountrySheet, setShowCountrySheet] = useState(false);
   const [showDomainSheet, setShowDomainSheet] = useState(false);
-  const [toast, setToast] = useState('');
-  const [toastVisible, setToastVisible] = useState(false);
+  
+  // 优化后的 Toast 状态
+  const [toastState, setToastState] = useState<ToastState>({ id: 0, msg: '', visible: false });
+  
   const [ipInfo, setIpInfo] = useState({ ip: '...', country: 'US' });
   const [isInitialized, setIsInitialized] = useState(false);
   const [isButtonActive, setIsButtonActive] = useState(false);
@@ -277,17 +284,24 @@ export default function AppleStylePage() {
   const buttonTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // --- Logic ---
+  
+  // 核心优化：支持快速点击的 Toast 逻辑
   const showToast = useCallback((msg: string) => {
+    // 1. 清除之前的定时器，防止旧的关闭操作影响新的 Toast
     if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
-    setToastVisible(false);
-    // 使用 requestAnimationFrame 确保状态更新与渲染帧同步
-    requestAnimationFrame(() => {
-      setTimeout(() => {
-        setToast(msg);
-        setToastVisible(true);
-        toastTimerRef.current = setTimeout(() => setToastVisible(false), 2000);
-      }, 50);
+    
+    // 2. 立即更新状态，使用 Date.now() 作为 ID 确保每次都是全新的渲染
+    // 这会触发 React 的 Key 变化，从而强制重启动画
+    setToastState({
+      id: Date.now(),
+      msg,
+      visible: true
     });
+
+    // 3. 设置新的自动关闭定时器
+    toastTimerRef.current = setTimeout(() => {
+      setToastState(prev => ({ ...prev, visible: false }));
+    }, 2000);
   }, []);
 
   const copyToClipboard = useCallback(async (text: string, label: string) => {
@@ -355,7 +369,6 @@ export default function AppleStylePage() {
   // 初始生成
   useEffect(() => {
     if (isInitialized && !userInfo.firstName) {
-        // 这里的初始生成不需要延迟
         try {
             const { firstName, lastName } = generateName(selectedCountry.code);
             const birthday = generateBirthday();
@@ -508,19 +521,24 @@ export default function AppleStylePage() {
         )}
       </main>
 
-      {/* Toast */}
-      <div 
-        className={`fixed bottom-10 left-1/2 -translate-x-1/2 z-50 transition-all duration-500 cubic-bezier(0.32, 0.72, 0, 1) pointer-events-none will-change-transform transform-gpu ${
-          toastVisible ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 translate-y-8 scale-90'
-        }`}
-      >
-        <div className="bg-gray-900/90 backdrop-blur-2xl text-white pl-4 pr-5 py-3 rounded-full shadow-[0_8px_30px_rgba(0,0,0,0.25)] flex items-center gap-3 min-w-[140px] justify-center border border-white/10 ring-1 ring-black/20">
-          <div className="bg-[#34C759] rounded-full p-0.5 shadow-[0_0_10px_rgba(52,199,89,0.4)]">
-            <Icon name="check" className="w-3.5 h-3.5 text-white stroke-[3px]" />
+      {/* 
+        Toast 容器 
+        使用 key={toastState.id} 确保每次 id 变化时，React 都会卸载旧的 Toast 并挂载新的。
+        这会强制 CSS 动画从头开始播放，实现“连击”效果。
+      */}
+      {toastState.visible && (
+        <div 
+          key={toastState.id}
+          className="fixed bottom-10 left-1/2 -translate-x-1/2 z-50 pointer-events-none animate-toast-pop origin-center"
+        >
+          <div className="bg-gray-900/90 backdrop-blur-2xl text-white pl-4 pr-5 py-3 rounded-full shadow-[0_8px_30px_rgba(0,0,0,0.25)] flex items-center gap-3 min-w-[140px] justify-center border border-white/10 ring-1 ring-black/20">
+            <div className="bg-[#34C759] rounded-full p-0.5 shadow-[0_0_10px_rgba(52,199,89,0.4)]">
+              <Icon name="check" className="w-3.5 h-3.5 text-white stroke-[3px]" />
+            </div>
+            <span className="text-[15px] font-semibold tracking-tight whitespace-nowrap">{toastState.msg}</span>
           </div>
-          <span className="text-[15px] font-semibold tracking-tight">{toast}</span>
         </div>
-      </div>
+      )}
 
       {/* 国家选择 Sheet */}
       <BottomSheet 
@@ -556,6 +574,16 @@ export default function AppleStylePage() {
       <style jsx global>{`
         @keyframes slide-up { from { transform: translateY(100%); } to { transform: translateY(0); } }
         .animate-slide-up { animation: slide-up 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
+        
+        /* 新增：Toast 弹跳动画 (Spring Physics) */
+        @keyframes toast-pop {
+          0% { transform: translate(-50%, 20px) scale(0.9); opacity: 0; }
+          40% { transform: translate(-50%, 0) scale(1.05); opacity: 1; }
+          100% { transform: translate(-50%, 0) scale(1); opacity: 1; }
+        }
+        .animate-toast-pop {
+          animation: toast-pop 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
       `}</style>
     </div>
   );
