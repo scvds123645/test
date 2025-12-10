@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 // 优化1: 保持 Edge Runtime
 export const runtime = 'edge';
 
-// --- 类型定义 (优化4: 移除 any) ---
+// --- 类型定义 ---
 
 interface GeoData {
   source: string;
@@ -17,11 +17,6 @@ interface GeoData {
   longitude: number | null;
   accurate: boolean;
   error?: string;
-}
-
-interface CacheEntry {
-  data: GeoData;
-  expiresAt: number;
 }
 
 interface ServiceMetrics {
@@ -65,19 +60,22 @@ interface IpWhoIsResponse {
   timezone?: { id: string };
 }
 
-interface IpApiComResponse {
-  status: string;
-  query: string;
+// 新增: FreeIPAPI 响应接口
+interface FreeIpApiResponse {
+  ipVersion: number;
+  ipAddress: string;
+  latitude: number;
+  longitude: number;
+  countryName: string;
   countryCode: string;
-  country: string;
+  timeZone: string;
+  zipCode: string;
+  cityName: string;
   regionName: string;
-  city: string;
-  timezone: string;
-  lat: number;
-  lon: number;
+  isProxy: boolean;
 }
 
-// --- 常量与正则 (优化2 & 7: 完善正则) ---
+// --- 常量与正则 ---
 
 // 包含 IPv4 私有段, localhost, 以及 IPv6 私有/本地链路/唯一本地地址
 const PRIVATE_IP_RANGES = [
@@ -96,20 +94,68 @@ const COMMON_HEADERS = {
   'Accept': 'application/json'
 };
 
-// --- 全局状态 (Edge 环境下可能在实例间复用，但不保证) ---
+// --- LRU 缓存实现 (优化1) ---
 
-// 优化2: 内存缓存 Map
-const ipCache = new Map<string, CacheEntry>();
-// 优化10: 请求去重 Map (存储正在进行的 Promise)
+class LRUCache<V> {
+  private cache: Map<string, { value: V; expiresAt: number }>;
+  private readonly maxEntries: number;
+  private readonly ttlMs: number;
+
+  constructor(maxEntries: number, ttlMs: number) {
+    this.cache = new Map();
+    this.maxEntries = maxEntries;
+    this.ttlMs = ttlMs;
+  }
+
+  get(key: string): V | null {
+    const entry = this.cache.get(key);
+    if (!entry) return null;
+
+    // 检查过期
+    if (Date.now() > entry.expiresAt) {
+      this.cache.delete(key);
+      return null;
+    }
+
+    // LRU 核心逻辑: 访问即刷新位置
+    // 删除并重新设置，使其移动到 Map 的末尾（最近使用）
+    this.cache.delete(key);
+    this.cache.set(key, entry);
+    
+    return entry.value;
+  }
+
+  set(key: string, value: V): void {
+    // 如果已存在，先删除以便更新位置
+    if (this.cache.has(key)) {
+      this.cache.delete(key);
+    } 
+    // 如果不存在且已满，淘汰最久未使用的（Map 的第一个元素）
+    else if (this.cache.size >= this.maxEntries) {
+      const firstKey = this.cache.keys().next().value;
+      if (firstKey) this.cache.delete(firstKey);
+    }
+
+    this.cache.set(key, {
+      value,
+      expiresAt: Date.now() + this.ttlMs
+    });
+  }
+}
+
+// --- 全局状态 ---
+
+// 优化1: 使用自定义 LRU 缓存 (Max 1000, 5分钟 TTL)
+const ipCache = new LRUCache<GeoData>(1000, 1000 * 60 * 5);
+
+// 请求去重 Map (存储正在进行的 Promise)
 const inflightRequests = new Map<string, Promise<GeoData>>();
-// 优化6: 性能指标
-const metrics: Record<string, ServiceMetrics> = {};
 
-const CACHE_TTL_MS = 1000 * 60 * 5; // 5分钟缓存
+// 性能指标
+const metrics: Record<string, ServiceMetrics> = {};
 
 // --- 工具函数 ---
 
-// 优化7: 增强的公网 IP 验证
 const isValidPublicIP = (ip: string | null | undefined): boolean => {
   if (!ip || ip === '未知') return false;
   // 简单的格式校验，排除明显非 IP 的字符串
@@ -117,7 +163,6 @@ const isValidPublicIP = (ip: string | null | undefined): boolean => {
   return !PRIVATE_IP_RANGES.some(pattern => pattern.test(ip));
 };
 
-// 优化6: 指标记录
 const recordMetric = (source: string, timeMs: number, isSuccess: boolean) => {
   if (!metrics[source]) {
     metrics[source] = { success: 0, failure: 0, totalTime: 0 };
@@ -130,7 +175,6 @@ const recordMetric = (source: string, timeMs: number, isSuccess: boolean) => {
   }
 };
 
-// 优化3 & 9: 通用 Fetch，带超时清理和泛型
 async function fetchService<T>(
   sourceName: string,
   url: string,
@@ -144,7 +188,6 @@ async function fetchService<T>(
     const res = await fetch(url, {
       headers: COMMON_HEADERS,
       signal: controller.signal,
-      // 强制不缓存外部 API 请求，确保数据新鲜度由我们自己的逻辑控制
       cache: 'no-store' 
     });
     
@@ -155,7 +198,6 @@ async function fetchService<T>(
     return data;
   } catch (error) {
     recordMetric(sourceName, Date.now() - startTime, false);
-    // 仅在开发环境打印详细错误，生产环境减少噪音
     if (process.env.NODE_ENV === 'development') {
       console.warn(`[GeoIP] ${sourceName} failed:`, error instanceof Error ? error.message : 'Unknown error');
     }
@@ -165,12 +207,10 @@ async function fetchService<T>(
   }
 }
 
-// 优化4: 标准化响应构建器
 function createResponse(data: GeoData, status: number = 200) {
   return NextResponse.json(data, {
     status,
     headers: {
-      // 优化8: Edge 缓存控制
       'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=60',
       'X-Geo-Source': data.source
     }
@@ -206,7 +246,7 @@ async function queryIpInfo(ip: string): Promise<GeoData> {
     source: 'ipinfo',
     ip: data.ip || ip,
     country: data.country,
-    countryName: data.country, // ipinfo only gives code usually
+    countryName: data.country,
     city: data.city || '',
     region: data.region || '',
     timezone: data.timezone || '',
@@ -234,24 +274,21 @@ async function queryIpWhoIs(ip: string): Promise<GeoData> {
   };
 }
 
-// 兜底服务 (HTTP)
-async function queryIpApiCom(ip: string): Promise<GeoData> {
-  const data = await fetchService<IpApiComResponse>(
-    'ip-api', 
-    `http://ip-api.com/json/${ip}?fields=status,country,countryCode,region,regionName,city,timezone,lat,lon,query`
-  );
-  if (!data || data.status !== 'success') throw new Error('Invalid response');
+// 优化2: 新的 HTTPS 兜底服务 (FreeIPAPI)
+async function queryFreeIpApi(ip: string): Promise<GeoData> {
+  const data = await fetchService<FreeIpApiResponse>('freeipapi', `https://freeipapi.com/api/json/${ip}`);
+  if (!data || !data.countryCode) throw new Error('Invalid response');
 
   return {
-    source: 'ip-api',
-    ip: data.query || ip,
+    source: 'freeipapi',
+    ip: data.ipAddress || ip,
     country: data.countryCode,
-    countryName: data.country,
-    city: data.city,
+    countryName: data.countryName,
+    city: data.cityName,
     region: data.regionName,
-    timezone: data.timezone,
-    latitude: data.lat,
-    longitude: data.lon,
+    timezone: data.timeZone,
+    latitude: data.latitude,
+    longitude: data.longitude,
     accurate: true
   };
 }
@@ -259,9 +296,7 @@ async function queryIpApiCom(ip: string): Promise<GeoData> {
 // --- 主逻辑 ---
 
 export async function GET(request: NextRequest) {
-  const now = Date.now();
-
-  // 优化5: 改进 IP 提取逻辑 (优先从 XFF 中找第一个公网 IP)
+  // IP 提取逻辑
   let ip = '未知';
   
   const xff = request.headers.get('x-forwarded-for');
@@ -270,12 +305,10 @@ export async function GET(request: NextRequest) {
 
   if (xff) {
     const ips = xff.split(',').map(s => s.trim());
-    // 找到第一个非内网的 IP
     const publicIp = ips.find(i => isValidPublicIP(i));
     if (publicIp) ip = publicIp;
   }
   
-  // 如果 XFF 没找到有效 IP，尝试其他头
   if (!isValidPublicIP(ip)) {
     if (isValidPublicIP(cfIp)) ip = cfIp!;
     else if (isValidPublicIP(realIp)) ip = realIp!;
@@ -283,7 +316,6 @@ export async function GET(request: NextRequest) {
 
   // 1. 校验 IP 有效性
   if (!isValidPublicIP(ip)) {
-    // 优化5: 结构化错误日志
     console.error(JSON.stringify({
       level: 'warn',
       event: 'invalid_ip',
@@ -304,21 +336,20 @@ export async function GET(request: NextRequest) {
       longitude: null,
       accurate: false,
       error: 'Invalid or Private IP address detected'
-    }, 200); // 保持 200 响应，但在 body 中标记 error
+    }, 200);
   }
 
-  // 2. 检查缓存
-  const cached = ipCache.get(ip);
-  if (cached && cached.expiresAt > now) {
-    return createResponse({ ...cached.data, source: `${cached.data.source} (cache)` });
+  // 2. 检查缓存 (LRU)
+  const cachedData = ipCache.get(ip);
+  if (cachedData) {
+    return createResponse({ ...cachedData, source: `${cachedData.source} (cache)` });
   }
 
   // 3. 检查是否有正在进行的请求 (去重)
   let fetchPromise = inflightRequests.get(ip);
 
   if (!fetchPromise) {
-    // 优化1: 使用 Promise.any 并行请求
-    // 注意: Promise.any 需要 Node.js 15+ 或现代浏览器环境 (Edge Runtime 支持)
+    // 竞速策略
     const strategies = [
       queryIpApiCo(ip),
       queryIpInfo(ip),
@@ -327,27 +358,17 @@ export async function GET(request: NextRequest) {
 
     fetchPromise = Promise.any(strategies)
       .catch(async (aggregateError) => {
-        // 如果 HTTPS 服务都失败了，尝试 HTTP 兜底
-        console.warn(`[GeoIP] All primary services failed for ${ip}, trying fallback.`);
+        // 优化2: 替换为 HTTPS 兜底服务
+        console.warn(`[GeoIP] All primary services failed for ${ip}, trying fallback (freeipapi).`);
         try {
-          return await queryIpApiCom(ip);
+          return await queryFreeIpApi(ip);
         } catch (e) {
           throw aggregateError; // 如果兜底也失败，抛出原始错误
         }
       })
       .then(data => {
-        // 写入缓存
-        ipCache.set(ip, {
-          data,
-          expiresAt: Date.now() + CACHE_TTL_MS
-        });
-        
-        // 简单的缓存清理策略 (防止内存无限增长)
-        if (ipCache.size > 1000) {
-          const firstKey = ipCache.keys().next().value;
-          if (firstKey) ipCache.delete(firstKey);
-        }
-        
+        // 写入 LRU 缓存
+        ipCache.set(ip, data);
         return data;
       })
       .finally(() => {
@@ -362,13 +383,12 @@ export async function GET(request: NextRequest) {
     const result = await fetchPromise;
     return createResponse(result);
   } catch (error) {
-    // 优化5: 结构化错误日志
     console.error(JSON.stringify({
       level: 'error',
       event: 'geoip_lookup_failed',
       ip,
       error: error instanceof Error ? error.message : 'Unknown',
-      metrics: metrics, // 附带性能指标
+      metrics: metrics,
       timestamp: new Date().toISOString()
     }));
 
