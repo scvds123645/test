@@ -1,7 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-// 优化1: 使用 edge runtime 以获得更快的冷启动和全球分发
+// 使用 edge runtime 以获得更快的冷启动和全球分发
 export const runtime = 'edge';
+
+interface AliceServiceResponse {
+  ip?: string;
+  network?: string | null;
+  country?: string;
+  country_code?: string;
+  continent?: string;
+  continent_code?: string;
+  asn?: string;
+  as_name?: string;
+  as_domain?: string;
+}
 
 interface IPApiResponse {
   status?: string;
@@ -40,7 +52,6 @@ interface IPInfoResponse {
   timezone?: string;
 }
 
-// 优化2: 使用静态正则,避免重复创建
 const PRIVATE_IP_RANGES = [
   /^10\./,
   /^172\.(1[6-9]|2[0-9]|3[0-1])\./,
@@ -61,7 +72,6 @@ const COMMON_HEADERS = {
   'Accept': 'application/json'
 };
 
-// 优化3: 提取通用的 fetch 逻辑,减少代码重复
 async function fetchWithTimeout(
   url: string, 
   timeout: number = 5000
@@ -83,7 +93,6 @@ async function fetchWithTimeout(
   }
 }
 
-// 优化4: 创建标准化的响应格式函数
 function createIPResponse(data: {
   source: string;
   ip: string;
@@ -113,7 +122,6 @@ function createIPResponse(data: {
 }
 
 export async function GET(request: NextRequest) {
-  // 优化5: 简化 IP 提取逻辑
   const ip = request.headers.get('cf-connecting-ip') || 
              request.headers.get('x-forwarded-for')?.split(',')[0].trim() || 
              request.headers.get('x-real-ip') || 
@@ -133,7 +141,32 @@ export async function GET(request: NextRequest) {
     });
   }
 
-  // 优化6: 使用 Promise.race 并行请求多个服务,取最快返回的结果
+  // 🌟 优先使用 aliceservice.net API
+  try {
+    const response = await fetchWithTimeout('https://ipv4.aliceservice.net/api/ip', 3000);
+    if (response) {
+      const data: AliceServiceResponse = await response.json();
+      if (data.country_code) {
+        console.log('✅ AliceService API 成功');
+        return createIPResponse({
+          source: 'aliceservice',
+          ip: data.ip || ip,
+          country: data.country_code,
+          countryName: data.country,
+          city: '',
+          region: data.continent,
+          timezone: '',
+          latitude: null,
+          longitude: null,
+          accurate: true
+        });
+      }
+    }
+  } catch (error) {
+    console.error('AliceService API 失败:', error);
+  }
+
+  // 备用方案：并行竞速其他 API
   const servicePromises = [
     // 服务1: ipapi.co
     fetchWithTimeout(`https://ipapi.co/${ip}/json/`, 4000).then(async (response) => {
@@ -200,7 +233,7 @@ export async function GET(request: NextRequest) {
     })
   ];
 
-  // 优化7: 使用 Promise.race 获取最快的成功响应
+  // 使用 Promise.race 获取最快的成功响应
   try {
     const result = await Promise.race(
       servicePromises.map(p => p.then(r => r ? Promise.resolve(r) : Promise.reject()))
