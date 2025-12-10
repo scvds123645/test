@@ -132,6 +132,7 @@ export const DOMAINS = [
   "bolzi.fun",
   "bomau.top",
   "bomoo.fun",
+  "bonerbot.xyz",
   "bonmu.fun",
   "boucheny.ovh",
   "bounshnetwork.com",
@@ -941,6 +942,7 @@ export const DOMAINS = [
   "softpixel.store",
   "softpix.store",
   "soive.online",
+  "sokmun.site",
   "sokvim.site",
   "solza.asia",
   "somau.fun",
@@ -1309,8 +1311,5 @@ export const DOMAINS = [
   "zunvi.top",
   "zurniu.site",
   "zx81.ovh",
-  "zxcc.lol",
-
-
-  
-  ];
+  "zxcc.lol"
+];
