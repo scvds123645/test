@@ -1,10 +1,37 @@
 import { countries, namesByCountry, CountryConfig } from '@/lib/countryData';
 import { DOMAINS } from '@/lib/domains';
-import { PASSWORDS } from '@/lib/pwd';
 
 // --- 静态常量定义 (内存优化：避免在函数调用时重复创建) ---
 
 const LATIN_CHARS = "abcdefghijklmnopqrstuvwxyz";
+const UPPERCASE = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+const LOWERCASE = "abcdefghijklmnopqrstuvwxyz";
+const NUMBERS = "0123456789";
+const SPECIAL_CHARS = "!@#$%&*";
+
+// 常见的真实密码词汇
+const COMMON_WORDS = [
+  'love', 'life', 'star', 'moon', 'king', 'cool', 'super', 'happy', 'lucky', 'smart',
+  'dream', 'angel', 'power', 'magic', 'light', 'dark', 'blue', 'fire', 'water', 'earth',
+  'smile', 'peace', 'hope', 'faith', 'trust', 'grace', 'brave', 'strong', 'free', 'wild',
+  'shine', 'gold', 'heart', 'soul', 'mind', 'time', 'wave', 'wind', 'rain', 'snow',
+  'sun', 'sky', 'sea', 'ocean', 'storm', 'cloud', 'thunder', 'flash', 'spark', 'flame',
+  'star', 'night', 'day', 'summer', 'winter', 'spring', 'fall', 'baby', 'sweet', 'honey',
+  'sugar', 'candy', 'rose', 'lily', 'diamond', 'pearl', 'ruby', 'crystal', 'tiger', 'lion',
+  'wolf', 'bear', 'eagle', 'dragon', 'phoenix', 'prince', 'princess', 'queen', 'royal', 'crown'
+];
+
+// 字符替换模式(leetspeak)
+const LEET_REPLACEMENTS: Record<string, string[]> = {
+  'a': ['@', '4'],
+  'e': ['3'],
+  'i': ['1', '!'],
+  'o': ['0'],
+  's': ['5', '$'],
+  't': ['7'],
+  'l': ['1'],
+  'g': ['9']
+};
 
 // 年龄分布权重
 const AGE_DISTRIBUTION = [
@@ -261,7 +288,14 @@ function randomDigits(length: number, min: number = 0, max: number = 9): string 
   return result;
 }
 
-// 新增：确保至少3个不同字符
+// 新增：检查键盘序列 (虽然此处未使用，但保留辅助函数)
+function hasKeyboardSequence(str: string): boolean {
+  const sequences = ['qwerty', 'asdfgh', 'zxcvbn', '123456', 'abcdef'];
+  const lowerStr = str.toLowerCase();
+  return sequences.some(seq => lowerStr.includes(seq));
+}
+
+// 新增：确保至少3个不同字符 (虽然此处未使用，但保留辅助函数)
 function hasMinimumVariety(str: string): boolean {
   const uniqueChars = new Set(str.toLowerCase());
   return uniqueChars.size >= 3;
@@ -458,11 +492,67 @@ export function generatePhone(country: CountryConfig) {
   }
 }
 
-// 优化版密码生成函数 - 使用真实常用密码列表
+// 优化版密码生成函数 - 严格限制为 6-8 位
 export function generatePassword(): string {
-  // 从预定义的 500+ 常用密码列表中随机选择一个
-  // 使用 secureRandom 确保随机性
-  return PASSWORDS[secureRandom(0, PASSWORDS.length - 1)];
+  // 1. 设定目标长度为 6 到 8
+  const targetLength = secureRandom(6, 8);
+  let password = '';
+  
+  // 策略选择
+  const strategy = Math.random();
+  
+  // 策略 1: 单词 + 数字 (70% 概率)
+  if (strategy < 0.70) {
+    let word = randomChoice(COMMON_WORDS);
+    
+    // 计算留给数字的空间 (至少留1-3位数字)
+    const numLength = secureRandom(1, targetLength - 3 > 1 ? targetLength - 3 : 2);
+    const maxWordLen = targetLength - numLength;
+
+    if (word.length > maxWordLen) {
+      word = word.substring(0, maxWordLen);
+    }
+    
+    // 大小写处理
+    const caseRand = Math.random();
+    if (caseRand < 0.60) {
+      word = word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+    } else if (caseRand < 0.90) {
+      word = word.toLowerCase();
+    } else {
+      word = word.toUpperCase();
+    }
+    
+    password = word;
+    
+    while (password.length < targetLength) {
+      password += randomDigit();
+    }
+  }
+  
+  // 策略 2: 纯混合随机 (20% 概率)
+  else if (strategy < 0.90) {
+    const chars = LATIN_CHARS + UPPERCASE + NUMBERS;
+    for (let i = 0; i < targetLength; i++) {
+      password += chars.charAt(secureRandom(0, chars.length - 1));
+    }
+  }
+  
+  // 策略 3: 纯数字 (10% 概率)
+  else {
+    password = randomDigits(targetLength);
+  }
+
+  // 最终兜底检查
+  if (password.length > targetLength) {
+    password = password.substring(0, targetLength);
+  } else if (password.length < targetLength) {
+    while (password.length < targetLength) {
+      password += randomDigit();
+    }
+  }
+  
+  return password;
 }
 
 export function getCountryConfig(code: string) {
@@ -473,124 +563,104 @@ export function getAllDomains(): string[] {
   return DOMAINS;
 }
 
-// 优化版邮箱生成函数 - Facebook 2024-2025 真实用户行为
+// 优化版邮箱生成函数 - 严格限制前缀 <= 11 位
 export function generateEmail(firstName: string, lastName: string, customDomain?: string) {
   const domain = customDomain || DOMAINS[secureRandom(0, DOMAINS.length - 1)];
 
-  // 转换为拉丁字符
+  // 1. 预处理：转换为拉丁字符
   let first = convertToLatinChars(firstName);
   let last = convertToLatinChars(lastName);
+  
+  // 强制限制输入名字长度，避免一开始就过长
+  // 比如 Christopher -> chris, Alexander -> alex
+  if (first.length > 6) first = first.slice(0, Math.max(4, secureRandom(4, 6)));
+  if (last.length > 6) last = last.slice(0, Math.max(4, secureRandom(4, 6)));
 
-  // 长度分布：8-15 字符（45% 8-10, 40% 11-13, 15% 14-15）
-  const lengthRand = Math.random();
-  let targetLength: number;
-  if (lengthRand < 0.45) {
-    targetLength = secureRandom(8, 10);
-  } else if (lengthRand < 0.85) {
-    targetLength = secureRandom(11, 13);
-  } else {
-    targetLength = secureRandom(14, 15);
-  }
+  const MAX_LEN = 11; // 硬性限制
 
-  // 命名模式权重
+  // 2. 命名模式权重 (针对短前缀优化)
   const patternRand = Math.random();
   let username = '';
   
-  // 模式1: firstname.lastname (35%)
-  if (patternRand < 0.35) {
-    username = `${first}.${last}`;
+  // 模式1: firstname + 随机数字 (40%) - 最容易控制长度且真实
+  if (patternRand < 0.40) {
+    username = first;
+    // 稍后统一添加数字后缀
   }
-  // 模式2: firstname_lastname (20%)
-  else if (patternRand < 0.55) {
-    username = `${first}_${last}`;
+  // 模式2: 首字母 + lastname (25%)
+  else if (patternRand < 0.65) {
+    const sep = Math.random() < 0.5 ? '.' : ''; // 50% 概率加点
+    username = `${first.charAt(0)}${sep}${last}`;
   }
-  // 模式3: firstnamelastname (15%)
-  else if (patternRand < 0.70) {
-    username = `${first}${last}`;
+  // 模式3: firstname + 首字母 (15%)
+  else if (patternRand < 0.80) {
+    const sep = Math.random() < 0.5 ? '.' : '_';
+    username = `${first}${sep}${last.charAt(0)}`;
   }
-  // 模式4: firstname.lastname + 2位数 (12%)
-  else if (patternRand < 0.82) {
-    const twoDigits = secureRandom(10, 99);
-    username = `${first}.${last}${twoDigits}`;
+  // 模式4: 短拼接 (15%) - 只有当两个词都很短时才用
+  else if (patternRand < 0.95) {
+    if (first.length + last.length < 9) {
+       const sep = Math.random() < 0.5 ? '.' : (Math.random() < 0.5 ? '_' : '');
+       username = `${first}${sep}${last}`;
+    } else {
+       // 如果名字太长，回退到模式1
+       username = first;
+    }
   }
-  // 模式5: firstname + 出生年份 (10%)
-  else if (patternRand < 0.92) {
-    const year = secureRandom(1990, 2006);
-    username = `${first}${year}`;
-  }
-  // 模式6: 缩写 + lastname (5%)
-  else if (patternRand < 0.97) {
-    const initial = first.charAt(0);
-    username = `${initial}.${last}`;
-  }
-  // 模式7: 其他创意组合 (3%)
+  // 模式5: 纯乱序/创意 (5%)
   else {
-    const creativeRand = Math.random();
-    if (creativeRand < 0.33) {
-      username = `${last}${first}${secureRandom(10, 99)}`;
-    } else if (creativeRand < 0.66) {
-      username = `${first}${secureRandom(100, 999)}`;
-    } else {
-      username = `${first}_${secureRandom(1990, 2006)}`;
+    username = `${last}${first.charAt(0)}`;
+  }
+
+  // 3. 长度控制与截断 (关键步骤)
+  // 现在的 username 还是纯字母组合，先确保它本身不超过 MAX_LEN
+  if (username.length > MAX_LEN) {
+    username = username.slice(0, MAX_LEN);
+    // 如果截断后末尾是特殊符号，去掉它
+    if (['.', '_'].includes(username.slice(-1))) {
+      username = username.slice(0, -1);
     }
   }
 
-  // 长度调整（保持在 8-15 范围内）
-  if (username.length < 8) {
-    // 如果太短，添加数字
-    while (username.length < 8) {
-      username += randomDigit();
-    }
-  } else if (username.length > 15) {
-    // 如果太长，智能截取
-    // 优先保留分隔符前后的部分
-    if (username.includes('.')) {
-      const parts = username.split('.');
-      const part1 = parts[0].substring(0, Math.min(6, parts[0].length));
-      const part2 = parts[1].substring(0, Math.min(6, parts[1].length));
-      username = `${part1}.${part2}`;
-    } else if (username.includes('_')) {
-      const parts = username.split('_');
-      const part1 = parts[0].substring(0, Math.min(6, parts[0].length));
-      const part2 = parts[1].substring(0, Math.min(6, parts[1].length));
-      username = `${part1}_${part2}`;
-    } else {
-      username = username.substring(0, 15);
-    }
-  }
-
-  // 数字后缀策略（50%概率）
-  if (Math.random() < 0.50 && username.length < 13) {
-    const suffixRand = Math.random();
-    let suffix = '';
-    
-    // 出生年份 (40%)
-    if (suffixRand < 0.40) {
-      suffix = secureRandom(1990, 2006).toString();
-    }
-    // 随机2位数 (35%)
-    else if (suffixRand < 0.75) {
-      suffix = secureRandom(10, 99).toString();
-    }
-    // 连续数字 (15%)
-    else if (suffixRand < 0.90) {
-      suffix = randomChoice(['123', '234', '345', '456', '567', '678', '789']);
-    }
-    // 重复数字 (10%)
-    else {
-      const digit = randomDigit();
-      suffix = digit + digit;
-    }
-    
-    // 确保添加后缀后不超过15
-    if (username.length + suffix.length <= 15) {
-      username += suffix;
+  // 4. 数字后缀策略 (增强唯一性，同时严格遵守长度限制)
+  // 计算剩余可用空间
+  const remainingSpace = MAX_LEN - username.length;
+  
+  // 只有当剩余空间 >= 2 时才考虑加数字
+  if (remainingSpace >= 2) {
+    // 70% 的概率添加数字后缀，或者如果用户名太短(<5)则强制添加
+    if (Math.random() < 0.70 || username.length < 5) {
+      let suffix = '';
+      
+      // 优先填满剩余空间，但不超过 4 位数字
+      const lenToGenerate = Math.min(remainingSpace, secureRandom(2, 4));
+      
+      if (lenToGenerate === 4) {
+        suffix = secureRandom(1985, 2025).toString(); // 年份
+      } else {
+        suffix = randomDigits(lenToGenerate);
+      }
+      
+      // 再次检查长度 (双重保险)
+      if (username.length + suffix.length <= MAX_LEN) {
+        username += suffix;
+      }
     }
   }
 
-  // 最终检查：确保至少3个不同字符
-  if (!hasMinimumVariety(username)) {
-    username += randomDigits(2);
+  // 5. 最终兜底检查
+  // 确保至少 6 位 (太短会被很多平台拒绝)，且不超过 11 位
+  if (username.length > MAX_LEN) {
+    username = username.slice(0, MAX_LEN);
+  }
+  
+  // 如果切完之后太短 (比如 < 6)，补齐数字
+  while (username.length < 6) {
+    username += randomDigit();
+  }
+  // 补齐后如果超了 (极端情况)，再次切
+  if (username.length > MAX_LEN) {
+     username = username.slice(0, MAX_LEN);
   }
 
   return `${username}@${domain}`;
