@@ -47,8 +47,7 @@ const haptic = (duration: number = 15) => {
   } 
 };
 
-// --- 组件: 信息行 (Meta Style - Fixed Click) ---
-// 修复点：将外层 div 改为 button，并移除 value span 的 select-all 属性
+// --- 组件: 信息行 (Glassmorphism Style) ---
 const InfoRow = memo(({ label, value, onCopy, isCopied, isLast = false }: {
   label: string;
   value: string;
@@ -57,46 +56,46 @@ const InfoRow = memo(({ label, value, onCopy, isCopied, isLast = false }: {
   isLast?: boolean;
 }) => {
   return (
-    <button 
-      type="button"
+    <div 
       onClick={onCopy}
-      className={`w-full group relative flex items-center justify-between py-3.5 pl-4 pr-4 cursor-pointer transition-colors duration-200 touch-manipulation text-left ${
-        isCopied ? 'bg-[#E7F3FF]' : 'bg-white hover:bg-[#F2F2F2] active:bg-[#E4E6EB]'
+      className={`group relative flex items-center justify-between py-4 pl-5 pr-5 cursor-pointer transition-colors duration-200 touch-manipulation ${
+        isCopied ? 'bg-blue-500/10' : 'bg-transparent hover:bg-white/5 active:bg-white/10'
       }`}
     >
-      {/* Label: Meta Secondary Gray */}
-      <span className="text-[15px] font-normal text-[#65676B] w-20 shrink-0 pointer-events-none">{label}</span>
+      {/* Label: Reduced opacity white */}
+      <span className="text-[15px] font-medium text-white/50 w-20 shrink-0 tracking-tight">{label}</span>
       
-      <div className="flex items-center gap-3 min-w-0 flex-1 justify-end h-6 relative overflow-hidden pointer-events-none">
-        {/* Value: Meta Primary Dark */}
-        {/* 修复：移除 select-all，防止手机端点击变成“选中文本”而非“触发点击事件” */}
+      <div className="flex items-center gap-3 min-w-0 flex-1 justify-end h-6 relative overflow-hidden">
+        {/* Value: High opacity white */}
         <span 
-          className={`absolute right-0 text-[17px] font-medium truncate tracking-tight transition-all duration-300 text-[#050505] ${
-            isCopied ? 'opacity-0 translate-y-4 scale-95' : 'opacity-100 translate-y-0 scale-100'
+          className={`absolute right-0 text-[17px] font-medium truncate select-all tracking-tight transition-all duration-300 ${
+            isCopied ? 'opacity-0 translate-y-4 scale-95' : 'opacity-100 translate-y-0 scale-100 text-white/90'
           }`}
         >
           {value || '---'}
         </span>
 
-        {/* 复制成功反馈 - Meta Green */}
+        {/* 复制成功反馈 */}
         <div 
           className={`absolute right-0 flex items-center gap-1.5 transition-all duration-300 cubic-bezier-bounce ${
-            isCopied ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 -translate-y-4 scale-90'
+            isCopied ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 -translate-y-4 scale-90 pointer-events-none'
           }`}
         >
-          <Icon name="check" className="w-4 h-4 text-[#31A24C] stroke-[3px]" />
-          <span className="text-[15px] font-semibold text-[#31A24C]">已复制</span>
+          <div className="bg-[#34C759] rounded-full p-0.5 shadow-[0_0_10px_rgba(52,199,89,0.4)]">
+            <Icon name="check" className="w-3 h-3 text-white stroke-[3px]" />
+          </div>
+          <span className="text-[15px] font-semibold text-[#34C759]">已复制</span>
         </div>
       </div>
       
-      {/* Separator: Meta Light Gray Border */}
-      {!isLast && <div className="absolute bottom-0 left-4 right-0 h-[1px] bg-[#F0F2F5] pointer-events-none" />}
-    </button>
+      {/* Separator: Very subtle white line */}
+      {!isLast && <div className="absolute bottom-0 left-5 right-0 h-[0.5px] bg-white/10" />}
+    </div>
   );
 });
 InfoRow.displayName = 'InfoRow';
 
-// --- 组件: 通用底部弹窗 (Standard iOS/Meta Drawer) ---
+// --- 组件: 通用底部弹窗 (Glassmorphism BottomSheet) ---
 const BottomSheet = memo(({ 
   isOpen, 
   onClose, 
@@ -115,29 +114,30 @@ const BottomSheet = memo(({
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center isolate">
       <div 
-        className="absolute inset-0 bg-black/40 backdrop-blur-none transition-opacity duration-300" 
+        className="absolute inset-0 bg-black/60 backdrop-blur-[2px] transition-opacity duration-300" 
         onClick={onClose} 
       />
       <div 
-        className="relative w-full max-w-md bg-white rounded-t-[16px] sm:rounded-[16px] max-h-[85vh] flex flex-col shadow-xl animate-slide-up overflow-hidden will-change-transform transform-gpu"
+        className="relative w-full max-w-md bg-[#0f172a]/80 backdrop-blur-xl border border-white/10 rounded-t-[24px] sm:rounded-[24px] max-h-[85vh] flex flex-col shadow-2xl animate-slide-up overflow-hidden will-change-transform transform-gpu"
+        style={{ boxShadow: '0 -10px 40px rgba(0,0,0,0.5)' }}
       >
-        <div className="p-3 border-b border-[#E4E6EB] sticky top-0 z-10 shrink-0 bg-white">
-          <div className="w-10 h-1 bg-[#E4E6EB] rounded-full mx-auto mb-3"></div>
+        <div className="p-4 border-b border-white/10 sticky top-0 z-10 shrink-0 bg-inherit">
+          <div className="w-10 h-1.5 bg-white/20 rounded-full mx-auto mb-4"></div>
           <div className="relative flex items-center justify-center min-h-[24px]">
-             <h3 className="text-[16px] font-semibold text-[#050505]">{title}</h3>
+             <h3 className="text-[17px] font-semibold text-white tracking-tight">{title}</h3>
              {rightAction ? (
                <div className="absolute right-0 top-1/2 -translate-y-1/2">{rightAction}</div>
              ) : (
                <button 
                  onClick={onClose}
-                 className="absolute right-0 top-1/2 -translate-y-1/2 bg-[#F0F2F5] p-1.5 rounded-full text-[#050505] hover:bg-[#E4E6EB] transition-colors"
+                 className="absolute right-0 top-1/2 -translate-y-1/2 bg-white/10 p-1.5 rounded-full text-white/60 hover:bg-white/20 transition-colors"
                >
                  <Icon name="close" className="w-4 h-4" />
                </button>
              )}
           </div>
         </div>
-        <div className="flex-1 overflow-y-auto overscroll-contain bg-white">
+        <div className="flex-1 overflow-y-auto overscroll-contain">
           {children}
         </div>
       </div>
@@ -146,7 +146,7 @@ const BottomSheet = memo(({
 });
 BottomSheet.displayName = 'BottomSheet';
 
-// --- 组件: 列表项 (Clean Style) ---
+// --- 组件: 列表项 (ListItem - Dark Mode) ---
 const ListItem = memo(({ 
   label, 
   isSelected, 
@@ -160,21 +160,21 @@ const ListItem = memo(({
 }) => (
   <button
     onClick={onClick}
-    className={`w-full flex items-center justify-between px-4 py-3 rounded-lg transition-all duration-200 active:scale-[0.98] touch-manipulation text-left ${
+    className={`w-full flex items-center justify-between px-4 py-3.5 rounded-xl transition-all duration-200 active:scale-[0.98] touch-manipulation border ${
       isSelected 
-        ? 'bg-[#E7F3FF] text-[#0064E0] font-semibold' 
-        : 'bg-transparent text-[#050505] hover:bg-[#F2F2F2] active:bg-[#E4E6EB]'
+        ? 'bg-white/10 border-white/10 shadow-lg shadow-black/10 text-[#409CFF] font-semibold' 
+        : 'bg-transparent border-transparent text-white/80 hover:bg-white/5 active:bg-white/10'
     }`}
   >
     <div className="flex items-center gap-3">
       {icon && (
-        <div className={`p-1.5 rounded-full ${isSelected ? 'bg-[#0064E0]/10' : 'bg-[#F0F2F5]'}`}>
-          <Icon name={icon} className={`w-4 h-4 ${isSelected ? 'text-[#0064E0]' : 'text-[#65676B]'}`} />
+        <div className={`p-1.5 rounded-lg ${isSelected ? 'bg-[#007AFF]/20' : 'bg-white/10'}`}>
+          <Icon name={icon} className={`w-4 h-4 ${isSelected ? 'text-[#409CFF]' : 'text-white/50'}`} />
         </div>
       )}
-      <span className="text-[16px]">{label}</span>
+      <span className="text-[16px] tracking-tight text-left">{label}</span>
     </div>
-    {isSelected && <Icon name="check" className="w-5 h-5 text-[#0064E0]" />}
+    {isSelected && <Icon name="check" className="w-5 h-5 text-[#409CFF]" />}
   </button>
 ));
 ListItem.displayName = 'ListItem';
@@ -190,7 +190,7 @@ const CountryList = memo(({
   onSelect: (c: CountryConfig) => void; 
 }) => {
   return (
-    <div className="p-2 space-y-1">
+    <div className="p-4 space-y-2">
       {countries.map((country) => (
         <ListItem
           key={country.code}
@@ -223,29 +223,29 @@ const DomainList = memo(({
   }, [allDomains, searchQuery]);
 
   return (
-    <div className="flex flex-col h-full bg-white">
-      {/* Search Bar */}
-      <div className="px-3 pb-2 pt-1 sticky top-0 z-10 bg-white">
+    <div className="flex flex-col h-full">
+      {/* Search Bar - Glass Style */}
+      <div className="px-4 pb-2 sticky top-0 z-10 bg-inherit">
          <div className="relative group">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <Icon name="search" className="w-4 h-4 text-[#65676B]" />
+              <Icon name="search" className="w-4 h-4 text-white/40" />
             </div>
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="搜索域名"
-              className="w-full pl-9 pr-8 py-2 bg-[#F0F2F5] rounded-full text-[15px] text-[#050505] placeholder-[#65676B] focus:ring-0 focus:outline-none focus:bg-[#E4E6EB] transition-colors"
+              className="w-full pl-9 pr-8 py-2 bg-black/20 border border-white/5 rounded-[10px] text-[16px] text-white placeholder-white/30 focus:ring-1 focus:ring-white/20 focus:bg-black/30 transition-colors caret-[#007AFF]"
             />
             {searchQuery && (
-              <button onClick={() => setSearchQuery('')} className="absolute inset-y-0 right-0 pr-2 flex items-center touch-manipulation">
-                <div className="bg-[#BCC0C4] rounded-full p-0.5"><Icon name="close" className="w-3 h-3 text-white" /></div>
+              <button onClick={() => setSearchQuery('')} className="absolute inset-y-0 right-0 pr-3 flex items-center touch-manipulation">
+                <div className="bg-white/20 rounded-full p-0.5"><Icon name="close" className="w-3 h-3 text-white" /></div>
               </button>
             )}
           </div>
       </div>
       
-      <div className="p-2 space-y-1">
+      <div className="p-4 pt-2 space-y-2">
         {!searchQuery && (
           <ListItem
             label="随机域名"
@@ -263,7 +263,7 @@ const DomainList = memo(({
           />
         ))}
         {filteredDomains.length === 0 && (
-          <div className="text-center py-8 text-[#65676B] text-sm">无匹配结果</div>
+          <div className="text-center py-8 text-white/30 text-sm">无匹配结果</div>
         )}
       </div>
     </div>
@@ -272,7 +272,7 @@ const DomainList = memo(({
 DomainList.displayName = 'DomainList';
 
 
-export default function MetaStylePage() {
+export default function GlassStylePage() {
   // --- State ---
   const [selectedCountry, setSelectedCountry] = useState<CountryConfig>(countries[0]);
   const [selectedDomain, setSelectedDomain] = useState<string>('random');
@@ -285,6 +285,7 @@ export default function MetaStylePage() {
   const [ipInfo, setIpInfo] = useState({ ip: '...', country: 'US' });
   const [isInitialized, setIsInitialized] = useState(false);
   
+  // 内联反馈状态
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [inboxStatus, setInboxStatus] = useState<'idle' | 'opening'>('idle');
   
@@ -423,80 +424,79 @@ export default function MetaStylePage() {
 
   // --- Render ---
   return (
-    // Global Background: Meta Light Gray (#F0F2F5)
-    <div className="min-h-screen bg-[#F0F2F5] font-sans text-[#050505] pb-10 overflow-x-hidden touch-pan-y selection:bg-[#0064E0]/20">
+    // Global Background: Dark Gradient
+    <div className="min-h-screen bg-gradient-to-br from-[#0f172a] via-[#1e1b4b] to-[#312e81] font-sans text-white pb-10 selection:bg-blue-400/30 overflow-x-hidden touch-pan-y">
       
-      {/* 顶部导航: White with Border */}
-      <header className="fixed top-0 left-0 right-0 h-[52px] bg-white border-b border-[#dadde1] z-40 flex items-center justify-center transition-all duration-300">
-        <h1 className="text-[17px] font-semibold text-[#050505]">脸书小助手</h1>
+      {/* 顶部导航: Glass Effect */}
+      <header className="fixed top-0 left-0 right-0 h-[52px] bg-[#0f172a]/60 backdrop-blur-md border-b border-white/10 z-40 flex items-center justify-center transition-all duration-300 isolate">
+        <h1 className="text-[17px] font-semibold text-white/90 tracking-tight drop-shadow-md">脸书小助手</h1>
         
-        <div className="absolute right-4 flex items-center gap-1.5 pl-2 pr-2.5 py-1 rounded-full bg-[#F0F2F5] border border-transparent">
-          <div className="w-1.5 h-1.5 rounded-full bg-[#31A24C]"></div>
-          <span className="text-[11px] font-semibold text-[#65676B] font-mono">{ipInfo.ip}</span>
+        <div className="absolute right-4 flex items-center gap-1.5 pl-2 pr-2.5 py-1 rounded-full bg-white/10 border border-white/10 backdrop-blur-md shadow-sm">
+          <div className="w-1.5 h-1.5 rounded-full bg-[#34C759] shadow-[0_0_6px_rgba(52,199,89,0.8)]"></div>
+          <span className="text-[11px] font-semibold text-white/70 font-mono tracking-tight">{ipInfo.ip}</span>
         </div>
       </header>
 
-      <main className="max-w-[420px] mx-auto px-4 pt-20 pb-10 space-y-5">
+      <main className="max-w-[420px] mx-auto px-5 pt-24 pb-10 space-y-6">
         
         {!isInitialized ? (
           <div className="flex flex-col items-center justify-center py-32 space-y-4">
-            <div className="w-8 h-8 border-[3px] border-[#E4E6EB] border-t-[#0064E0] rounded-full animate-spin"></div>
+            <div className="w-8 h-8 border-[3px] border-white/10 border-t-[#007AFF] rounded-full animate-spin"></div>
           </div>
         ) : (
           <>
-            {/* 核心信息卡片: Solid White with subtle shadow */}
-            <section className="bg-white rounded-lg overflow-hidden shadow-sm border border-[#dadde1]/50">
+            {/* 核心信息卡片: Glassmorphism */}
+            <section className="bg-white/5 backdrop-blur-md rounded-[20px] overflow-hidden shadow-[0_8px_32px_rgba(0,0,0,0.2)] border border-white/10 transform-gpu isolate">
               <InfoRow label="姓氏" value={userInfo.lastName} onCopy={() => copyToClipboard(userInfo.lastName, '姓氏')} isCopied={copiedField === '姓氏'} />
               <InfoRow label="名字" value={userInfo.firstName} onCopy={() => copyToClipboard(userInfo.firstName, '名字')} isCopied={copiedField === '名字'} />
               <InfoRow label="生日" value={userInfo.birthday} onCopy={() => copyToClipboard(userInfo.birthday, '生日')} isCopied={copiedField === '生日'} />
               <InfoRow label="手机号" value={userInfo.phone} onCopy={() => copyToClipboard(userInfo.phone, '手机号')} isCopied={copiedField === '手机号'} />
               <InfoRow label="密码" value={userInfo.password} onCopy={() => copyToClipboard(userInfo.password, '密码')} isCopied={copiedField === '密码'} />
               
-              {/* 邮箱行 - 修复点击区域 */}
-              <div className={`relative flex flex-col pt-3.5 pb-2 pl-4 pr-4 group transition-colors duration-200 ${copiedField === '邮箱' ? 'bg-[#E7F3FF]' : 'bg-white'}`}>
-                {/* 修复：将上半部分改为 Button，确保点击响应 */}
-                <button 
-                  type="button"
-                  className="w-full text-left flex items-center justify-between mb-2 cursor-pointer touch-manipulation hover:bg-black/5 rounded-md p-1 -ml-1 pr-0 transition-colors"
+              {/* 邮箱行 */}
+              <div className="relative flex flex-col py-4 pl-5 pr-5 group transition-colors duration-200">
+                <div 
+                  className="flex items-center justify-between mb-3 cursor-pointer touch-manipulation" 
                   onClick={() => copyToClipboard(userInfo.email, '邮箱')}
                 >
-                  <span className="text-[15px] font-normal text-[#65676B] w-20 shrink-0 pointer-events-none">邮箱</span>
+                  <span className="text-[15px] font-medium text-white/50 w-20 shrink-0 tracking-tight">邮箱</span>
                   
-                  <div className="flex items-center gap-3 min-w-0 flex-1 justify-end h-6 relative overflow-hidden pointer-events-none">
-                    {/* 移除 select-all */}
+                  <div className="flex items-center gap-3 min-w-0 flex-1 justify-end h-6 relative overflow-hidden">
                     <span 
-                      className={`absolute right-0 text-[17px] font-medium truncate tracking-tight transition-all duration-300 text-[#050505] ${
-                        copiedField === '邮箱' ? 'opacity-0 translate-y-4 scale-95' : 'opacity-100 translate-y-0 scale-100'
+                      className={`absolute right-0 text-[17px] font-medium truncate select-all tracking-tight transition-all duration-300 ${
+                        copiedField === '邮箱' ? 'opacity-0 translate-y-4 scale-95' : 'opacity-100 translate-y-0 scale-100 text-white/90'
                       }`}
                     >
                       {userInfo.email}
                     </span>
                     <div 
                       className={`absolute right-0 flex items-center gap-1.5 transition-all duration-300 cubic-bezier-bounce ${
-                        copiedField === '邮箱' ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 -translate-y-4 scale-90'
+                        copiedField === '邮箱' ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 -translate-y-4 scale-90 pointer-events-none'
                       }`}
                     >
-                      <Icon name="check" className="w-4 h-4 text-[#31A24C] stroke-[3px]" />
-                      <span className="text-[15px] font-semibold text-[#31A24C]">已复制</span>
+                      <div className="bg-[#34C759] rounded-full p-0.5 shadow-[0_0_10px_rgba(52,199,89,0.4)]">
+                        <Icon name="check" className="w-3 h-3 text-white stroke-[3px]" />
+                      </div>
+                      <span className="text-[15px] font-semibold text-[#34C759]">已复制</span>
                     </div>
                   </div>
-                </button>
+                </div>
                 
-                <div className="flex justify-end pt-1 pb-1">
+                <div className="flex justify-end pt-1">
                   <button
                     onClick={handleInboxClick}
                     className={`inline-flex items-center gap-1.5 py-1.5 px-4 rounded-full text-[13px] font-semibold transition-all duration-300 active:scale-95 touch-manipulation overflow-hidden relative border ${
                         inboxStatus === 'opening' 
-                        ? 'bg-[#31A24C]/10 border-[#31A24C]/20 text-[#31A24C]' 
-                        : 'bg-[#E7F3FF] border-transparent text-[#0064E0] hover:bg-[#D8EAFE] active:bg-[#C9E0FC]'
+                        ? 'bg-[#34C759]/20 border-[#34C759]/30 text-[#4ADE80]' 
+                        : 'bg-[#007AFF]/20 border-[#007AFF]/30 hover:bg-[#007AFF]/30 text-[#409CFF] active:bg-[#007AFF]/40'
                     }`}
                   >
                     <div className={`flex items-center gap-1.5 transition-all duration-300 ${inboxStatus === 'opening' ? '-translate-y-8 opacity-0' : 'translate-y-0 opacity-100'}`}>
-                        <Icon name="inbox" className="w-4 h-4" />
+                        <Icon name="inbox" className="w-3.5 h-3.5" />
                         查看收件箱
                     </div>
                     <div className={`absolute inset-0 flex items-center justify-center gap-1.5 transition-all duration-300 ${inboxStatus === 'opening' ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'}`}>
-                        <Icon name="open" className="w-4 h-4" />
+                        <Icon name="open" className="w-3.5 h-3.5" />
                         已打开
                     </div>
                   </button>
@@ -504,20 +504,20 @@ export default function MetaStylePage() {
               </div>
             </section>
 
-            {/* 主要操作按钮: Meta Blue (#0064E0) */}
+            {/* 主要操作按钮: Glassy Gradient */}
             <button
               ref={buttonRef}
               onClick={generate}
               disabled={!isInitialized}
-              className="w-full py-3.5 rounded-lg bg-[#0064E0] shadow-sm flex items-center justify-center gap-2.5 transform-gpu touch-manipulation overflow-hidden relative active:scale-[0.98] active:opacity-90 transition-transform duration-100"
+              className="w-full py-4 rounded-[18px] shadow-[0_0_20px_rgba(0,122,255,0.3)] border border-white/20 flex items-center justify-center gap-2.5 transform-gpu touch-manipulation overflow-hidden relative active:scale-[0.96] active:brightness-90 bg-gradient-to-b from-[#007AFF] to-[#0055b3] hover:scale-[1.01] hover:brightness-110 transition-transform duration-100"
             >
               {/* 正常状态内容 */}
               <div 
                 ref={normalContentRef}
                 className="absolute flex items-center gap-2.5 translate-y-0 opacity-100 scale-100"
               >
-                  <Icon name="sparkles" className="w-5 h-5 text-white" />
-                  <span className="text-[17px] font-semibold text-white">
+                  <Icon name="sparkles" className="w-5 h-5 text-white/90" />
+                  <span className="text-[17px] font-semibold tracking-tight text-white drop-shadow-sm">
                     生成新身份
                   </span>
               </div>
@@ -530,7 +530,7 @@ export default function MetaStylePage() {
                    <div className="bg-white/20 rounded-full p-1">
                       <Icon name="check" className="w-5 h-5 text-white stroke-[3px]" />
                    </div>
-                   <span className="text-[17px] font-semibold text-white">
+                   <span className="text-[17px] font-semibold tracking-tight text-white">
                     已生成
                   </span>
               </div>
@@ -542,29 +542,29 @@ export default function MetaStylePage() {
               </div>
             </button>
 
-            {/* 设置区域: Native List Style */}
+            {/* 设置区域: Glassmorphism */}
             <section>
-              <div className="pl-4 mb-2 text-[13px] font-semibold text-[#65676B] uppercase tracking-wide">生成设置</div>
-              <div className="bg-white rounded-lg overflow-hidden shadow-sm border border-[#dadde1]/50">
+              <div className="pl-5 mb-2 text-[13px] font-medium text-white/40 uppercase tracking-wide">生成设置</div>
+              <div className="bg-white/5 backdrop-blur-md rounded-[18px] overflow-hidden shadow-lg shadow-black/10 border border-white/10 transform-gpu isolate">
                 <button
                   onClick={() => { haptic(20); setShowCountrySheet(true); }}
-                  className="w-full flex items-center justify-between py-3.5 pl-4 pr-3 hover:bg-[#F2F2F2] active:bg-[#E4E6EB] transition-colors duration-200 group touch-manipulation text-left"
+                  className="w-full flex items-center justify-between py-4 pl-5 pr-4 hover:bg-white/5 active:bg-white/10 transition-colors duration-200 group touch-manipulation"
                 >
-                  <span className="text-[16px] font-normal text-[#050505]">选择地区</span>
+                  <span className="text-[16px] font-medium text-white/90 tracking-tight">选择地区</span>
                   <div className="flex items-center gap-2">
-                    <span className="text-[15px] text-[#65676B]">{selectedCountry.name}</span>
-                    <Icon name="chevronRight" className="w-5 h-5 text-[#BCC0C4]" />
+                    <span className="text-[16px] text-white/60 tracking-tight">{selectedCountry.name}</span>
+                    <Icon name="chevronRight" className="w-4 h-4 text-white/30 group-active:text-white/50 transition-transform duration-300 group-active:rotate-90" />
                   </div>
                 </button>
-                <div className="ml-4 h-[1px] bg-[#F0F2F5]" />
+                <div className="ml-5 h-[0.5px] bg-white/10" />
                 <button
                   onClick={() => { haptic(20); setShowDomainSheet(true); }}
-                  className="w-full flex items-center justify-between py-3.5 pl-4 pr-3 hover:bg-[#F2F2F2] active:bg-[#E4E6EB] transition-colors duration-200 group touch-manipulation text-left"
+                  className="w-full flex items-center justify-between py-4 pl-5 pr-4 hover:bg-white/5 active:bg-white/10 transition-colors duration-200 group touch-manipulation"
                 >
-                  <span className="text-[16px] font-normal text-[#050505]">邮箱域名</span>
+                  <span className="text-[16px] font-medium text-white/90 tracking-tight">邮箱域名</span>
                   <div className="flex items-center gap-2">
-                    <span className="text-[15px] text-[#65676B]">{displayDomain}</span>
-                    <Icon name="chevronRight" className="w-5 h-5 text-[#BCC0C4]" />
+                    <span className="text-[16px] text-white/60 tracking-tight">{displayDomain}</span>
+                    <Icon name="chevronRight" className="w-4 h-4 text-white/30 group-active:text-white/50 transition-transform duration-300 group-active:rotate-90" />
                   </div>
                 </button>
               </div>
@@ -576,12 +576,12 @@ export default function MetaStylePage() {
                 href="https://t.me/fang180" 
                 target="_blank" 
                 rel="noopener noreferrer" 
-                className="inline-flex items-center gap-1.5 text-[14px] text-[#0064E0] hover:text-[#0055b3] font-medium transition-colors active:bg-[#0064E0]/10 py-2 px-4 rounded-full touch-manipulation"
+                className="inline-flex items-center gap-1.5 text-[14px] text-[#409CFF] hover:text-[#60aeff] font-medium transition-colors active:opacity-60 py-2 px-4 rounded-full hover:bg-white/5 touch-manipulation"
               >
                 <Icon name="link" className="w-4 h-4" />
                 加入 Telegram 频道
               </a>
-              <p className="text-[12px] text-[#8A8D91] font-normal">
+              <p className="text-[12px] text-white/30 font-medium tracking-tight">
                 支持 {countries.length} 个国家 • {allDomains.length} 个域名
               </p>
             </footer>
@@ -608,7 +608,7 @@ export default function MetaStylePage() {
         onClose={() => setShowDomainSheet(false)} 
         title="选择域名"
         rightAction={
-          <button onClick={() => setShowDomainSheet(false)} className="text-[#0064E0] font-semibold text-[15px] p-2 -mr-2 touch-manipulation hover:bg-[#F2F2F2] rounded-lg transition-colors">
+          <button onClick={() => setShowDomainSheet(false)} className="text-[#409CFF] font-medium text-[15px] p-2 -mr-2 touch-manipulation hover:text-white transition-colors">
             完成
           </button>
         }
@@ -622,23 +622,26 @@ export default function MetaStylePage() {
 
       <style jsx global>{`
         @keyframes slide-up { from { transform: translateY(100%); } to { transform: translateY(0); } }
-        .animate-slide-up { animation: slide-up 0.35s cubic-bezier(0.1, 0.9, 0.2, 1); }
+        .animate-slide-up { animation: slide-up 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
         
         .cubic-bezier-bounce {
           transition-timing-function: cubic-bezier(0.34, 1.56, 0.64, 1);
         }
 
-        /* --- 按钮动画: Meta Green to Meta Blue --- */
+        /* --- 按钮动画 Keyframes --- */
         
         @keyframes btn-bg-success {
           0% { 
-            background-color: #31A24C;
+            background-image: linear-gradient(to bottom, #34C759, #28a745); 
+            box-shadow: 0 0 20px rgba(52,199,89,0.4); 
           }
           70% { 
-            background-color: #31A24C;
+            background-image: linear-gradient(to bottom, #34C759, #28a745); 
+            box-shadow: 0 0 20px rgba(52,199,89,0.4); 
           }
           100% { 
-            background-color: #0064E0;
+            background-image: linear-gradient(to bottom, #007AFF, #0055b3); 
+            box-shadow: 0 0 20px rgba(0,122,255,0.3);
           }
         }
         .anim-bg-success {
