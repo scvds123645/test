@@ -47,7 +47,8 @@ const haptic = (duration: number = 15) => {
   } 
 };
 
-// --- 组件: 信息行 (Meta Style - Solid) ---
+// --- 组件: 信息行 (Meta Style - Fixed Click) ---
+// 修复点：将外层 div 改为 button，并移除 value span 的 select-all 属性
 const InfoRow = memo(({ label, value, onCopy, isCopied, isLast = false }: {
   label: string;
   value: string;
@@ -56,19 +57,21 @@ const InfoRow = memo(({ label, value, onCopy, isCopied, isLast = false }: {
   isLast?: boolean;
 }) => {
   return (
-    <div 
+    <button 
+      type="button"
       onClick={onCopy}
-      className={`group relative flex items-center justify-between py-3.5 pl-4 pr-4 cursor-pointer transition-colors duration-200 touch-manipulation ${
+      className={`w-full group relative flex items-center justify-between py-3.5 pl-4 pr-4 cursor-pointer transition-colors duration-200 touch-manipulation text-left ${
         isCopied ? 'bg-[#E7F3FF]' : 'bg-white hover:bg-[#F2F2F2] active:bg-[#E4E6EB]'
       }`}
     >
       {/* Label: Meta Secondary Gray */}
-      <span className="text-[15px] font-normal text-[#65676B] w-20 shrink-0">{label}</span>
+      <span className="text-[15px] font-normal text-[#65676B] w-20 shrink-0 pointer-events-none">{label}</span>
       
-      <div className="flex items-center gap-3 min-w-0 flex-1 justify-end h-6 relative overflow-hidden">
+      <div className="flex items-center gap-3 min-w-0 flex-1 justify-end h-6 relative overflow-hidden pointer-events-none">
         {/* Value: Meta Primary Dark */}
+        {/* 修复：移除 select-all，防止手机端点击变成“选中文本”而非“触发点击事件” */}
         <span 
-          className={`absolute right-0 text-[17px] font-medium truncate select-all tracking-tight transition-all duration-300 text-[#050505] ${
+          className={`absolute right-0 text-[17px] font-medium truncate tracking-tight transition-all duration-300 text-[#050505] ${
             isCopied ? 'opacity-0 translate-y-4 scale-95' : 'opacity-100 translate-y-0 scale-100'
           }`}
         >
@@ -78,7 +81,7 @@ const InfoRow = memo(({ label, value, onCopy, isCopied, isLast = false }: {
         {/* 复制成功反馈 - Meta Green */}
         <div 
           className={`absolute right-0 flex items-center gap-1.5 transition-all duration-300 cubic-bezier-bounce ${
-            isCopied ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 -translate-y-4 scale-90 pointer-events-none'
+            isCopied ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 -translate-y-4 scale-90'
           }`}
         >
           <Icon name="check" className="w-4 h-4 text-[#31A24C] stroke-[3px]" />
@@ -87,8 +90,8 @@ const InfoRow = memo(({ label, value, onCopy, isCopied, isLast = false }: {
       </div>
       
       {/* Separator: Meta Light Gray Border */}
-      {!isLast && <div className="absolute bottom-0 left-4 right-0 h-[1px] bg-[#F0F2F5]" />}
-    </div>
+      {!isLast && <div className="absolute bottom-0 left-4 right-0 h-[1px] bg-[#F0F2F5] pointer-events-none" />}
+    </button>
   );
 });
 InfoRow.displayName = 'InfoRow';
@@ -157,7 +160,7 @@ const ListItem = memo(({
 }) => (
   <button
     onClick={onClick}
-    className={`w-full flex items-center justify-between px-4 py-3 rounded-lg transition-all duration-200 active:scale-[0.98] touch-manipulation ${
+    className={`w-full flex items-center justify-between px-4 py-3 rounded-lg transition-all duration-200 active:scale-[0.98] touch-manipulation text-left ${
       isSelected 
         ? 'bg-[#E7F3FF] text-[#0064E0] font-semibold' 
         : 'bg-transparent text-[#050505] hover:bg-[#F2F2F2] active:bg-[#E4E6EB]'
@@ -169,7 +172,7 @@ const ListItem = memo(({
           <Icon name={icon} className={`w-4 h-4 ${isSelected ? 'text-[#0064E0]' : 'text-[#65676B]'}`} />
         </div>
       )}
-      <span className="text-[16px] text-left">{label}</span>
+      <span className="text-[16px]">{label}</span>
     </div>
     {isSelected && <Icon name="check" className="w-5 h-5 text-[#0064E0]" />}
   </button>
@@ -221,7 +224,7 @@ const DomainList = memo(({
 
   return (
     <div className="flex flex-col h-full bg-white">
-      {/* Search Bar - Facebook Pill Style */}
+      {/* Search Bar */}
       <div className="px-3 pb-2 pt-1 sticky top-0 z-10 bg-white">
          <div className="relative group">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -449,17 +452,20 @@ export default function MetaStylePage() {
               <InfoRow label="手机号" value={userInfo.phone} onCopy={() => copyToClipboard(userInfo.phone, '手机号')} isCopied={copiedField === '手机号'} />
               <InfoRow label="密码" value={userInfo.password} onCopy={() => copyToClipboard(userInfo.password, '密码')} isCopied={copiedField === '密码'} />
               
-              {/* 邮箱行 */}
-              <div className={`relative flex flex-col py-3.5 pl-4 pr-4 group transition-colors duration-200 ${copiedField === '邮箱' ? 'bg-[#E7F3FF]' : 'bg-white hover:bg-[#F2F2F2]'}`}>
-                <div 
-                  className="flex items-center justify-between mb-3 cursor-pointer touch-manipulation" 
+              {/* 邮箱行 - 修复点击区域 */}
+              <div className={`relative flex flex-col pt-3.5 pb-2 pl-4 pr-4 group transition-colors duration-200 ${copiedField === '邮箱' ? 'bg-[#E7F3FF]' : 'bg-white'}`}>
+                {/* 修复：将上半部分改为 Button，确保点击响应 */}
+                <button 
+                  type="button"
+                  className="w-full text-left flex items-center justify-between mb-2 cursor-pointer touch-manipulation hover:bg-black/5 rounded-md p-1 -ml-1 pr-0 transition-colors"
                   onClick={() => copyToClipboard(userInfo.email, '邮箱')}
                 >
-                  <span className="text-[15px] font-normal text-[#65676B] w-20 shrink-0">邮箱</span>
+                  <span className="text-[15px] font-normal text-[#65676B] w-20 shrink-0 pointer-events-none">邮箱</span>
                   
-                  <div className="flex items-center gap-3 min-w-0 flex-1 justify-end h-6 relative overflow-hidden">
+                  <div className="flex items-center gap-3 min-w-0 flex-1 justify-end h-6 relative overflow-hidden pointer-events-none">
+                    {/* 移除 select-all */}
                     <span 
-                      className={`absolute right-0 text-[17px] font-medium truncate select-all tracking-tight transition-all duration-300 text-[#050505] ${
+                      className={`absolute right-0 text-[17px] font-medium truncate tracking-tight transition-all duration-300 text-[#050505] ${
                         copiedField === '邮箱' ? 'opacity-0 translate-y-4 scale-95' : 'opacity-100 translate-y-0 scale-100'
                       }`}
                     >
@@ -467,16 +473,16 @@ export default function MetaStylePage() {
                     </span>
                     <div 
                       className={`absolute right-0 flex items-center gap-1.5 transition-all duration-300 cubic-bezier-bounce ${
-                        copiedField === '邮箱' ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 -translate-y-4 scale-90 pointer-events-none'
+                        copiedField === '邮箱' ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 -translate-y-4 scale-90'
                       }`}
                     >
                       <Icon name="check" className="w-4 h-4 text-[#31A24C] stroke-[3px]" />
                       <span className="text-[15px] font-semibold text-[#31A24C]">已复制</span>
                     </div>
                   </div>
-                </div>
+                </button>
                 
-                <div className="flex justify-end pt-1">
+                <div className="flex justify-end pt-1 pb-1">
                   <button
                     onClick={handleInboxClick}
                     className={`inline-flex items-center gap-1.5 py-1.5 px-4 rounded-full text-[13px] font-semibold transition-all duration-300 active:scale-95 touch-manipulation overflow-hidden relative border ${
@@ -542,7 +548,7 @@ export default function MetaStylePage() {
               <div className="bg-white rounded-lg overflow-hidden shadow-sm border border-[#dadde1]/50">
                 <button
                   onClick={() => { haptic(20); setShowCountrySheet(true); }}
-                  className="w-full flex items-center justify-between py-3.5 pl-4 pr-3 hover:bg-[#F2F2F2] active:bg-[#E4E6EB] transition-colors duration-200 group touch-manipulation"
+                  className="w-full flex items-center justify-between py-3.5 pl-4 pr-3 hover:bg-[#F2F2F2] active:bg-[#E4E6EB] transition-colors duration-200 group touch-manipulation text-left"
                 >
                   <span className="text-[16px] font-normal text-[#050505]">选择地区</span>
                   <div className="flex items-center gap-2">
@@ -553,7 +559,7 @@ export default function MetaStylePage() {
                 <div className="ml-4 h-[1px] bg-[#F0F2F5]" />
                 <button
                   onClick={() => { haptic(20); setShowDomainSheet(true); }}
-                  className="w-full flex items-center justify-between py-3.5 pl-4 pr-3 hover:bg-[#F2F2F2] active:bg-[#E4E6EB] transition-colors duration-200 group touch-manipulation"
+                  className="w-full flex items-center justify-between py-3.5 pl-4 pr-3 hover:bg-[#F2F2F2] active:bg-[#E4E6EB] transition-colors duration-200 group touch-manipulation text-left"
                 >
                   <span className="text-[16px] font-normal text-[#050505]">邮箱域名</span>
                   <div className="flex items-center gap-2">
