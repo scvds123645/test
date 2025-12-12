@@ -47,7 +47,7 @@ const haptic = (duration: number = 15) => {
   } 
 };
 
-// --- 组件: 信息行 (Glassmorphism Style) ---
+// --- 组件: 信息行 (Clear Glass Style) ---
 const InfoRow = memo(({ label, value, onCopy, isCopied, isLast = false }: {
   label: string;
   value: string;
@@ -59,17 +59,17 @@ const InfoRow = memo(({ label, value, onCopy, isCopied, isLast = false }: {
     <div 
       onClick={onCopy}
       className={`group relative flex items-center justify-between py-4 pl-5 pr-5 cursor-pointer transition-colors duration-200 touch-manipulation ${
-        isCopied ? 'bg-blue-500/10' : 'bg-transparent hover:bg-white/5 active:bg-white/10'
+        isCopied ? 'bg-blue-500/20' : 'bg-transparent hover:bg-white/10 active:bg-white/20'
       }`}
     >
-      {/* Label: Reduced opacity white */}
-      <span className="text-[15px] font-medium text-white/50 w-20 shrink-0 tracking-tight">{label}</span>
+      {/* Label: 强阴影，保证在亮背景下可见 */}
+      <span className="text-[15px] font-medium text-white/70 w-20 shrink-0 tracking-tight drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">{label}</span>
       
       <div className="flex items-center gap-3 min-w-0 flex-1 justify-end h-6 relative overflow-hidden">
-        {/* Value: High opacity white */}
+        {/* Value: 强阴影，白色文字 */}
         <span 
-          className={`absolute right-0 text-[17px] font-medium truncate select-all tracking-tight transition-all duration-300 ${
-            isCopied ? 'opacity-0 translate-y-4 scale-95' : 'opacity-100 translate-y-0 scale-100 text-white/90'
+          className={`absolute right-0 text-[17px] font-bold truncate select-all tracking-tight transition-all duration-300 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)] ${
+            isCopied ? 'opacity-0 translate-y-4 scale-95' : 'opacity-100 translate-y-0 scale-100 text-white'
           }`}
         >
           {value || '---'}
@@ -81,15 +81,15 @@ const InfoRow = memo(({ label, value, onCopy, isCopied, isLast = false }: {
             isCopied ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 -translate-y-4 scale-90 pointer-events-none'
           }`}
         >
-          <div className="bg-[#34C759] rounded-full p-0.5 shadow-[0_0_10px_rgba(52,199,89,0.4)]">
+          <div className="bg-[#34C759] rounded-full p-0.5 shadow-[0_0_10px_rgba(52,199,89,0.8)]">
             <Icon name="check" className="w-3 h-3 text-white stroke-[3px]" />
           </div>
-          <span className="text-[15px] font-semibold text-[#34C759]">已复制</span>
+          <span className="text-[15px] font-semibold text-[#34C759] drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">已复制</span>
         </div>
       </div>
       
-      {/* Separator: Very subtle white line */}
-      {!isLast && <div className="absolute bottom-0 left-5 right-0 h-[0.5px] bg-white/10" />}
+      {/* Separator: 略微增强 */}
+      {!isLast && <div className="absolute bottom-0 left-5 right-0 h-[0.5px] bg-white/20 shadow-sm" />}
     </div>
   );
 });
@@ -118,8 +118,8 @@ const BottomSheet = memo(({
         onClick={onClose} 
       />
       <div 
-        className="relative w-full max-w-md bg-[#0f172a]/80 backdrop-blur-xl border border-white/10 rounded-t-[24px] sm:rounded-[24px] max-h-[85vh] flex flex-col shadow-2xl animate-slide-up overflow-hidden will-change-transform transform-gpu"
-        style={{ boxShadow: '0 -10px 40px rgba(0,0,0,0.5)' }}
+        className="relative w-full max-w-md bg-[#1a1a1a]/90 backdrop-blur-xl border border-white/10 rounded-t-[24px] sm:rounded-[24px] max-h-[85vh] flex flex-col shadow-2xl animate-slide-up overflow-hidden will-change-transform transform-gpu"
+        style={{ boxShadow: '0 -10px 40px rgba(0,0,0,0.8)' }}
       >
         <div className="p-4 border-b border-white/10 sticky top-0 z-10 shrink-0 bg-inherit">
           <div className="w-10 h-1.5 bg-white/20 rounded-full mx-auto mb-4"></div>
@@ -436,22 +436,20 @@ export default function GlassStylePage() {
         />
       </div>
 
-      {/* 2. 渐变遮罩层 */}
-      {/* 40% 的黑色遮罩，既能透出背景图，又能保证基本的对比度 */}
-      <div className="fixed inset-0 z-0 bg-black/40 backdrop-blur-[1px]"></div>
-
+      {/* 2. 移除全局遮罩 (Clear View) */}
+      {/* 完全移除黑底遮罩，确保背景原色展示 */}
+      
       {/* 3. 内容层 */}
       <div className="relative z-10">
         
-        {/* 顶部导航: 修复重叠问题 (使用 justify-between) */}
-        <header className="fixed top-0 left-0 right-0 h-[52px] bg-black/20 backdrop-blur-md border-b border-white/10 z-40 flex items-center justify-between px-4 transition-all duration-300">
-          {/* 左侧标题 */}
-          <h1 className="text-[17px] font-semibold text-white/90 tracking-tight drop-shadow-md">脸书小助手</h1>
+        {/* 顶部导航: 透明背景，避免遮挡头部 */}
+        <header className="fixed top-0 left-0 right-0 h-[52px] bg-transparent z-40 flex items-center justify-between px-4 pt-2 transition-all duration-300 pointer-events-none">
+          {/* 标题增加阴影 */}
+          <h1 className="text-[17px] font-semibold text-white tracking-tight drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">脸书小助手</h1>
           
-          {/* 右侧 IP */}
-          <div className="flex items-center gap-1.5 pl-2 pr-2.5 py-1 rounded-full bg-black/40 border border-white/10 backdrop-blur-md shadow-sm">
-            <div className="w-1.5 h-1.5 rounded-full bg-[#34C759] shadow-[0_0_6px_rgba(52,199,89,0.8)]"></div>
-            <span className="text-[11px] font-semibold text-white/90 font-mono tracking-tight">{ipInfo.ip}</span>
+          <div className="pointer-events-auto flex items-center gap-1.5 pl-2 pr-2.5 py-1 rounded-full bg-black/40 border border-white/20 backdrop-blur-md shadow-lg">
+            <div className="w-1.5 h-1.5 rounded-full bg-[#34C759] shadow-[0_0_6px_rgba(52,199,89,1)]"></div>
+            <span className="text-[11px] font-semibold text-white/95 font-mono tracking-tight drop-shadow-md">{ipInfo.ip}</span>
           </div>
         </header>
 
@@ -459,12 +457,16 @@ export default function GlassStylePage() {
           
           {!isInitialized ? (
             <div className="flex flex-col items-center justify-center py-32 space-y-4">
-              <div className="w-8 h-8 border-[3px] border-white/20 border-t-[#007AFF] rounded-full animate-spin"></div>
+              <div className="w-8 h-8 border-[3px] border-white/20 border-t-[#007AFF] rounded-full animate-spin drop-shadow-lg"></div>
             </div>
           ) : (
             <>
-              {/* 核心信息卡片: 加深背景 (bg-black/40) 确保文字清晰 */}
-              <section className="bg-black/40 backdrop-blur-xl rounded-[20px] overflow-hidden shadow-[0_8px_32px_rgba(0,0,0,0.3)] border border-white/10 transform-gpu isolate">
+              {/* 核心信息卡片: 
+                  - bg-black/20 (非常淡的黑底)
+                  - backdrop-blur-[2px] (微量模糊，接近透明玻璃)
+                  - 强阴影 shadow-2xl
+              */}
+              <section className="bg-black/20 backdrop-blur-[2px] rounded-[20px] overflow-hidden shadow-[0_8px_32px_rgba(0,0,0,0.5)] border border-white/20 transform-gpu isolate">
                 <InfoRow label="姓氏" value={userInfo.lastName} onCopy={() => copyToClipboard(userInfo.lastName, '姓氏')} isCopied={copiedField === '姓氏'} />
                 <InfoRow label="名字" value={userInfo.firstName} onCopy={() => copyToClipboard(userInfo.firstName, '名字')} isCopied={copiedField === '名字'} />
                 <InfoRow label="生日" value={userInfo.birthday} onCopy={() => copyToClipboard(userInfo.birthday, '生日')} isCopied={copiedField === '生日'} />
@@ -477,12 +479,12 @@ export default function GlassStylePage() {
                     className="flex items-center justify-between mb-3 cursor-pointer touch-manipulation" 
                     onClick={() => copyToClipboard(userInfo.email, '邮箱')}
                   >
-                    <span className="text-[15px] font-medium text-white/50 w-20 shrink-0 tracking-tight">邮箱</span>
+                    <span className="text-[15px] font-medium text-white/70 w-20 shrink-0 tracking-tight drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">邮箱</span>
                     
                     <div className="flex items-center gap-3 min-w-0 flex-1 justify-end h-6 relative overflow-hidden">
                       <span 
-                        className={`absolute right-0 text-[17px] font-medium truncate select-all tracking-tight transition-all duration-300 ${
-                          copiedField === '邮箱' ? 'opacity-0 translate-y-4 scale-95' : 'opacity-100 translate-y-0 scale-100 text-white/90'
+                        className={`absolute right-0 text-[17px] font-bold truncate select-all tracking-tight transition-all duration-300 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)] ${
+                          copiedField === '邮箱' ? 'opacity-0 translate-y-4 scale-95' : 'opacity-100 translate-y-0 scale-100 text-white'
                         }`}
                       >
                         {userInfo.email}
@@ -492,10 +494,10 @@ export default function GlassStylePage() {
                           copiedField === '邮箱' ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 -translate-y-4 scale-90 pointer-events-none'
                         }`}
                       >
-                        <div className="bg-[#34C759] rounded-full p-0.5 shadow-[0_0_10px_rgba(52,199,89,0.4)]">
+                        <div className="bg-[#34C759] rounded-full p-0.5 shadow-[0_0_10px_rgba(52,199,89,0.8)]">
                           <Icon name="check" className="w-3 h-3 text-white stroke-[3px]" />
                         </div>
-                        <span className="text-[15px] font-semibold text-[#34C759]">已复制</span>
+                        <span className="text-[15px] font-semibold text-[#34C759] drop-shadow-md">已复制</span>
                       </div>
                     </div>
                   </div>
@@ -503,15 +505,15 @@ export default function GlassStylePage() {
                   <div className="flex justify-end pt-1">
                     <button
                       onClick={handleInboxClick}
-                      className={`inline-flex items-center gap-1.5 py-1.5 px-4 rounded-full text-[13px] font-semibold transition-all duration-300 active:scale-95 touch-manipulation overflow-hidden relative border ${
+                      className={`inline-flex items-center gap-1.5 py-1.5 px-4 rounded-full text-[13px] font-semibold transition-all duration-300 active:scale-95 touch-manipulation overflow-hidden relative border shadow-lg ${
                           inboxStatus === 'opening' 
-                          ? 'bg-[#34C759]/20 border-[#34C759]/30 text-[#4ADE80]' 
-                          : 'bg-[#007AFF]/20 border-[#007AFF]/30 hover:bg-[#007AFF]/30 text-[#409CFF] active:bg-[#007AFF]/40'
+                          ? 'bg-[#34C759]/40 border-[#34C759]/50 text-[#4ADE80] backdrop-blur-md' 
+                          : 'bg-[#007AFF]/30 border-[#007AFF]/40 hover:bg-[#007AFF]/40 text-[#409CFF] active:bg-[#007AFF]/50 backdrop-blur-md'
                       }`}
                     >
                       <div className={`flex items-center gap-1.5 transition-all duration-300 ${inboxStatus === 'opening' ? '-translate-y-8 opacity-0' : 'translate-y-0 opacity-100'}`}>
                           <Icon name="inbox" className="w-3.5 h-3.5" />
-                          查看收件箱
+                          <span className="drop-shadow-sm">查看收件箱</span>
                       </div>
                       <div className={`absolute inset-0 flex items-center justify-center gap-1.5 transition-all duration-300 ${inboxStatus === 'opening' ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'}`}>
                           <Icon name="open" className="w-3.5 h-3.5" />
@@ -527,15 +529,15 @@ export default function GlassStylePage() {
                 ref={buttonRef}
                 onClick={generate}
                 disabled={!isInitialized}
-                className="w-full py-4 rounded-[18px] shadow-[0_0_20px_rgba(0,122,255,0.3)] border border-white/20 flex items-center justify-center gap-2.5 transform-gpu touch-manipulation overflow-hidden relative active:scale-[0.96] active:brightness-90 bg-gradient-to-b from-[#007AFF] to-[#0055b3] hover:scale-[1.01] hover:brightness-110 transition-transform duration-100"
+                className="w-full py-4 rounded-[18px] shadow-[0_0_20px_rgba(0,122,255,0.4)] border border-white/20 flex items-center justify-center gap-2.5 transform-gpu touch-manipulation overflow-hidden relative active:scale-[0.96] active:brightness-90 bg-gradient-to-b from-[#007AFF]/90 to-[#0055b3]/90 hover:scale-[1.01] hover:brightness-110 transition-transform duration-100 backdrop-blur-sm"
               >
                 {/* 正常状态内容 */}
                 <div 
                   ref={normalContentRef}
                   className="absolute flex items-center gap-2.5 translate-y-0 opacity-100 scale-100"
                 >
-                    <Icon name="sparkles" className="w-5 h-5 text-white/90" />
-                    <span className="text-[17px] font-semibold tracking-tight text-white drop-shadow-sm">
+                    <Icon name="sparkles" className="w-5 h-5 text-white/90 drop-shadow-sm" />
+                    <span className="text-[17px] font-semibold tracking-tight text-white drop-shadow-md">
                       生成新身份
                     </span>
                 </div>
@@ -548,7 +550,7 @@ export default function GlassStylePage() {
                      <div className="bg-white/20 rounded-full p-1">
                         <Icon name="check" className="w-5 h-5 text-white stroke-[3px]" />
                      </div>
-                     <span className="text-[17px] font-semibold tracking-tight text-white">
+                     <span className="text-[17px] font-semibold tracking-tight text-white drop-shadow-md">
                       已生成
                     </span>
                 </div>
@@ -560,29 +562,29 @@ export default function GlassStylePage() {
                 </div>
               </button>
 
-              {/* 设置区域: 加深背景 */}
+              {/* 设置区域: 同样透明化处理 */}
               <section>
-                <div className="pl-5 mb-2 text-[13px] font-medium text-white/60 uppercase tracking-wide drop-shadow-md">生成设置</div>
-                <div className="bg-black/40 backdrop-blur-xl rounded-[18px] overflow-hidden shadow-lg shadow-black/20 border border-white/10 transform-gpu isolate">
+                <div className="pl-5 mb-2 text-[13px] font-medium text-white/80 uppercase tracking-wide drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">生成设置</div>
+                <div className="bg-black/20 backdrop-blur-[2px] rounded-[18px] overflow-hidden shadow-lg shadow-black/20 border border-white/20 transform-gpu isolate">
                   <button
                     onClick={() => { haptic(20); setShowCountrySheet(true); }}
-                    className="w-full flex items-center justify-between py-4 pl-5 pr-4 hover:bg-white/5 active:bg-white/10 transition-colors duration-200 group touch-manipulation"
+                    className="w-full flex items-center justify-between py-4 pl-5 pr-4 hover:bg-white/10 active:bg-white/20 transition-colors duration-200 group touch-manipulation"
                   >
-                    <span className="text-[16px] font-medium text-white/90 tracking-tight">选择地区</span>
+                    <span className="text-[16px] font-medium text-white/90 tracking-tight drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">选择地区</span>
                     <div className="flex items-center gap-2">
-                      <span className="text-[16px] text-white/60 tracking-tight">{selectedCountry.name}</span>
-                      <Icon name="chevronRight" className="w-4 h-4 text-white/30 group-active:text-white/50 transition-transform duration-300 group-active:rotate-90" />
+                      <span className="text-[16px] text-white/90 tracking-tight drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">{selectedCountry.name}</span>
+                      <Icon name="chevronRight" className="w-4 h-4 text-white/70 group-active:text-white/90 transition-transform duration-300 group-active:rotate-90 drop-shadow-md" />
                     </div>
                   </button>
-                  <div className="ml-5 h-[0.5px] bg-white/10" />
+                  <div className="ml-5 h-[0.5px] bg-white/20" />
                   <button
                     onClick={() => { haptic(20); setShowDomainSheet(true); }}
-                    className="w-full flex items-center justify-between py-4 pl-5 pr-4 hover:bg-white/5 active:bg-white/10 transition-colors duration-200 group touch-manipulation"
+                    className="w-full flex items-center justify-between py-4 pl-5 pr-4 hover:bg-white/10 active:bg-white/20 transition-colors duration-200 group touch-manipulation"
                   >
-                    <span className="text-[16px] font-medium text-white/90 tracking-tight">邮箱域名</span>
+                    <span className="text-[16px] font-medium text-white/90 tracking-tight drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">邮箱域名</span>
                     <div className="flex items-center gap-2">
-                      <span className="text-[16px] text-white/60 tracking-tight">{displayDomain}</span>
-                      <Icon name="chevronRight" className="w-4 h-4 text-white/30 group-active:text-white/50 transition-transform duration-300 group-active:rotate-90" />
+                      <span className="text-[16px] text-white/90 tracking-tight drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">{displayDomain}</span>
+                      <Icon name="chevronRight" className="w-4 h-4 text-white/70 group-active:text-white/90 transition-transform duration-300 group-active:rotate-90 drop-shadow-md" />
                     </div>
                   </button>
                 </div>
@@ -594,12 +596,12 @@ export default function GlassStylePage() {
                   href="https://t.me/fang180" 
                   target="_blank" 
                   rel="noopener noreferrer" 
-                  className="inline-flex items-center gap-1.5 text-[14px] text-[#409CFF] hover:text-[#60aeff] font-medium transition-colors active:opacity-60 py-2 px-4 rounded-full bg-black/30 backdrop-blur-sm touch-manipulation"
+                  className="inline-flex items-center gap-1.5 text-[14px] text-[#409CFF] hover:text-[#60aeff] font-bold transition-colors active:opacity-60 py-2 px-4 rounded-full bg-black/40 backdrop-blur-md touch-manipulation shadow-lg border border-white/10"
                 >
                   <Icon name="link" className="w-4 h-4" />
-                  加入 Telegram 频道
+                  <span className="drop-shadow-md">加入 Telegram 频道</span>
                 </a>
-                <p className="text-[12px] text-white/50 font-medium tracking-tight drop-shadow-md">
+                <p className="text-[12px] text-white/80 font-medium tracking-tight drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">
                   支持 {countries.length} 个国家 • {allDomains.length} 个域名
                 </p>
               </footer>
@@ -646,8 +648,6 @@ export default function GlassStylePage() {
         .cubic-bezier-bounce {
           transition-timing-function: cubic-bezier(0.34, 1.56, 0.64, 1);
         }
-        /* --- 按钮动画 Keyframes --- */
-        
         @keyframes btn-bg-success {
           0% { 
             background-image: linear-gradient(to bottom, #34C759, #28a745); 
