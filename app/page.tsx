@@ -62,11 +62,9 @@ const InfoRow = memo(({ label, value, onCopy, isCopied, isLast = false }: {
         isCopied ? 'bg-blue-500/20' : 'bg-transparent hover:bg-white/10 active:bg-white/20'
       }`}
     >
-      {/* Label: 强阴影，保证在亮背景下可见 */}
       <span className="text-[15px] font-medium text-white/70 w-20 shrink-0 tracking-tight drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">{label}</span>
       
       <div className="flex items-center gap-3 min-w-0 flex-1 justify-end h-6 relative overflow-hidden">
-        {/* Value: 强阴影，白色文字 */}
         <span 
           className={`absolute right-0 text-[17px] font-bold truncate select-all tracking-tight transition-all duration-300 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)] ${
             isCopied ? 'opacity-0 translate-y-4 scale-95' : 'opacity-100 translate-y-0 scale-100 text-white'
@@ -75,7 +73,6 @@ const InfoRow = memo(({ label, value, onCopy, isCopied, isLast = false }: {
           {value || '---'}
         </span>
 
-        {/* 复制成功反馈 */}
         <div 
           className={`absolute right-0 flex items-center gap-1.5 transition-all duration-300 cubic-bezier-bounce ${
             isCopied ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 -translate-y-4 scale-90 pointer-events-none'
@@ -88,14 +85,13 @@ const InfoRow = memo(({ label, value, onCopy, isCopied, isLast = false }: {
         </div>
       </div>
       
-      {/* Separator: 略微增强 */}
       {!isLast && <div className="absolute bottom-0 left-5 right-0 h-[0.5px] bg-white/20 shadow-sm" />}
     </div>
   );
 });
 InfoRow.displayName = 'InfoRow';
 
-// --- 组件: 通用底部弹窗 (Glassmorphism BottomSheet) ---
+// --- 组件: 通用底部弹窗 ---
 const BottomSheet = memo(({ 
   isOpen, 
   onClose, 
@@ -146,7 +142,7 @@ const BottomSheet = memo(({
 });
 BottomSheet.displayName = 'BottomSheet';
 
-// --- 组件: 列表项 (ListItem - Dark Mode) ---
+// --- 组件: 列表项 ---
 const ListItem = memo(({ 
   label, 
   isSelected, 
@@ -179,92 +175,31 @@ const ListItem = memo(({
 ));
 ListItem.displayName = 'ListItem';
 
-// --- 组件: 国家选择列表 ---
-const CountryList = memo(({ 
-  countries, 
-  selectedCode, 
-  onSelect 
-}: { 
-  countries: CountryConfig[]; 
-  selectedCode: string; 
-  onSelect: (c: CountryConfig) => void; 
-}) => {
-  return (
-    <div className="p-4 space-y-2">
-      {countries.map((country) => (
-        <ListItem
-          key={country.code}
-          label={country.name}
-          isSelected={selectedCode === country.code}
-          onClick={() => onSelect(country)}
-        />
-      ))}
-    </div>
-  );
+// --- 组件: 国家/域名选择列表 (代码保持不变) ---
+const CountryList = memo(({ countries, selectedCode, onSelect }: { countries: CountryConfig[]; selectedCode: string; onSelect: (c: CountryConfig) => void; }) => {
+  return (<div className="p-4 space-y-2">{countries.map((country) => (<ListItem key={country.code} label={country.name} isSelected={selectedCode === country.code} onClick={() => onSelect(country)} />))}</div>);
 });
 CountryList.displayName = 'CountryList';
 
-// --- 组件: 域名选择列表 ---
-const DomainList = memo(({ 
-  allDomains, 
-  selectedDomain, 
-  onSelect 
-}: { 
-  allDomains: string[]; 
-  selectedDomain: string; 
-  onSelect: (d: string) => void; 
-}) => {
+const DomainList = memo(({ allDomains, selectedDomain, onSelect }: { allDomains: string[]; selectedDomain: string; onSelect: (d: string) => void; }) => {
   const [searchQuery, setSearchQuery] = useState('');
-  
   const filteredDomains = useMemo(() => {
     if (!searchQuery) return allDomains;
-    const lowerQuery = searchQuery.toLowerCase();
-    return allDomains.filter(d => d.toLowerCase().includes(lowerQuery));
+    return allDomains.filter(d => d.toLowerCase().includes(searchQuery.toLowerCase()));
   }, [allDomains, searchQuery]);
-
   return (
     <div className="flex flex-col h-full">
-      {/* Search Bar - Glass Style */}
       <div className="px-4 pb-2 sticky top-0 z-10 bg-inherit">
          <div className="relative group">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <Icon name="search" className="w-4 h-4 text-white/40" />
-            </div>
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="搜索域名"
-              className="w-full pl-9 pr-8 py-2 bg-black/20 border border-white/5 rounded-[10px] text-[16px] text-white placeholder-white/30 focus:ring-1 focus:ring-white/20 focus:bg-black/30 transition-colors caret-[#007AFF]"
-            />
-            {searchQuery && (
-              <button onClick={() => setSearchQuery('')} className="absolute inset-y-0 right-0 pr-3 flex items-center touch-manipulation">
-                <div className="bg-white/20 rounded-full p-0.5"><Icon name="close" className="w-3 h-3 text-white" /></div>
-              </button>
-            )}
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><Icon name="search" className="w-4 h-4 text-white/40" /></div>
+            <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="搜索域名" className="w-full pl-9 pr-8 py-2 bg-black/20 border border-white/5 rounded-[10px] text-[16px] text-white placeholder-white/30 focus:ring-1 focus:ring-white/20 focus:bg-black/30 transition-colors caret-[#007AFF]" />
+            {searchQuery && (<button onClick={() => setSearchQuery('')} className="absolute inset-y-0 right-0 pr-3 flex items-center touch-manipulation"><div className="bg-white/20 rounded-full p-0.5"><Icon name="close" className="w-3 h-3 text-white" /></div></button>)}
           </div>
       </div>
-      
       <div className="p-4 pt-2 space-y-2">
-        {!searchQuery && (
-          <ListItem
-            label="随机域名"
-            isSelected={selectedDomain === 'random'}
-            onClick={() => onSelect('random')}
-            icon="sparkles"
-          />
-        )}
-        {filteredDomains.map((domain) => (
-          <ListItem
-            key={domain}
-            label={domain}
-            isSelected={selectedDomain === domain}
-            onClick={() => onSelect(domain)}
-          />
-        ))}
-        {filteredDomains.length === 0 && (
-          <div className="text-center py-8 text-white/30 text-sm">无匹配结果</div>
-        )}
+        {!searchQuery && (<ListItem label="随机域名" isSelected={selectedDomain === 'random'} onClick={() => onSelect('random')} icon="sparkles" />)}
+        {filteredDomains.map((domain) => (<ListItem key={domain} label={domain} isSelected={selectedDomain === domain} onClick={() => onSelect(domain)} />))}
+        {filteredDomains.length === 0 && (<div className="text-center py-8 text-white/30 text-sm">无匹配结果</div>)}
       </div>
     </div>
   );
@@ -281,9 +216,11 @@ export default function GlassStylePage() {
   });
   const [showCountrySheet, setShowCountrySheet] = useState(false);
   const [showDomainSheet, setShowDomainSheet] = useState(false);
-  
   const [ipInfo, setIpInfo] = useState({ ip: '...', country: 'US' });
   const [isInitialized, setIsInitialized] = useState(false);
+  
+  // 沉浸模式状态 (隐藏UI)
+  const [isImmersive, setIsImmersive] = useState(false);
   
   // 内联反馈状态
   const [copiedField, setCopiedField] = useState<string | null>(null);
@@ -293,39 +230,33 @@ export default function GlassStylePage() {
   const buttonRef = useRef<HTMLButtonElement>(null);
   const successContentRef = useRef<HTMLDivElement>(null);
   const normalContentRef = useRef<HTMLDivElement>(null);
-
   const copyTimerRef = useRef<NodeJS.Timeout | null>(null);
   const inboxTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // --- Logic ---
-  
+  const toggleImmersive = useCallback(() => {
+    haptic(20);
+    setIsImmersive(prev => !prev);
+  }, []);
+
   const copyToClipboard = useCallback(async (text: string, label: string) => {
     haptic(30);
     try {
       await navigator.clipboard.writeText(text);
       if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
       setCopiedField(label);
-      copyTimerRef.current = setTimeout(() => {
-        setCopiedField(null);
-      }, 1500);
-    } catch {
-      haptic(50);
-    }
+      copyTimerRef.current = setTimeout(() => { setCopiedField(null); }, 1500);
+    } catch { haptic(50); }
   }, []);
 
   const triggerAnimation = useCallback(() => {
     const btn = buttonRef.current;
     const successEl = successContentRef.current;
     const normalEl = normalContentRef.current;
-
     if (btn && successEl && normalEl) {
-      btn.classList.remove('anim-bg-success');
-      successEl.classList.remove('anim-slide-success');
-      normalEl.classList.remove('anim-slide-normal');
+      btn.classList.remove('anim-bg-success'); successEl.classList.remove('anim-slide-success'); normalEl.classList.remove('anim-slide-normal');
       void btn.offsetWidth; 
-      btn.classList.add('anim-bg-success');
-      successEl.classList.add('anim-slide-success');
-      normalEl.classList.add('anim-slide-normal');
+      btn.classList.add('anim-bg-success'); successEl.classList.add('anim-slide-success'); normalEl.classList.add('anim-slide-normal');
     }
   }, []);
 
@@ -333,7 +264,6 @@ export default function GlassStylePage() {
     haptic(50);
     setCopiedField(null);
     triggerAnimation();
-
     try {
       const { firstName, lastName } = generateName(selectedCountry.code);
       const birthday = generateBirthday();
@@ -341,22 +271,16 @@ export default function GlassStylePage() {
       const password = generatePassword();
       const customDomain = selectedDomain === 'random' ? undefined : selectedDomain;
       const email = generateEmail(firstName, lastName, customDomain);
-      
       setUserInfo({ firstName, lastName, birthday, phone, password, email });
-    } catch (error) {
-      console.error(error);
-    }
+    } catch (error) { console.error(error); }
   }, [selectedCountry, selectedDomain, triggerAnimation]);
 
   const handleInboxClick = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
     if (inboxStatus === 'opening') return;
-
     haptic(30);
     setInboxStatus('opening');
-
     const emailName = userInfo.email.split('@')[0];
-    
     inboxTimerRef.current = setTimeout(() => {
         window.open(`https://yopmail.com/?login=${emailName}`, '_blank');
         setInboxStatus('idle');
@@ -371,19 +295,13 @@ export default function GlassStylePage() {
         const response = await fetch('/api/ip-info');
         const data = await response.json();
         if (!isMounted) return;
-        
         setIpInfo({ ip: data.ip || '未知', country: data.country || 'US' });
         if (data.country && data.accurate) {
           const detectedCountry = getCountryConfig(data.country);
           if (detectedCountry) setSelectedCountry(detectedCountry);
         }
         setIsInitialized(true);
-      } catch (error) {
-        if (isMounted) {
-          setIpInfo({ ip: '检测失败', country: 'US' });
-          setIsInitialized(true);
-        }
-      }
+      } catch (error) { if (isMounted) { setIpInfo({ ip: '检测失败', country: 'US' }); setIsInitialized(true); } }
     };
     initializeApp();
     return () => { isMounted = false; };
@@ -411,15 +329,11 @@ export default function GlassStylePage() {
   const displayDomain = selectedDomain === 'random' ? '随机' : selectedDomain;
 
   const handleCountrySelect = useCallback((country: CountryConfig) => {
-    haptic(20);
-    setSelectedCountry(country);
-    setShowCountrySheet(false);
+    haptic(20); setSelectedCountry(country); setShowCountrySheet(false);
   }, []);
 
   const handleDomainSelect = useCallback((domain: string) => {
-    haptic(20);
-    setSelectedDomain(domain);
-    setShowDomainSheet(false);
+    haptic(20); setSelectedDomain(domain); setShowDomainSheet(false);
   }, []);
 
   // --- Render ---
@@ -428,32 +342,54 @@ export default function GlassStylePage() {
     <div className="min-h-screen relative font-sans text-white pb-10 selection:bg-blue-400/30 overflow-x-hidden touch-pan-y">
       
       {/* 1. 背景图片层 (最底层) */}
-      <div className="fixed inset-0 z-0">
+      <div className="fixed inset-0 z-0 pointer-events-none">
         <img 
           src="https://loliapi.com/acg/" 
           alt="background" 
           className="w-full h-full object-cover"
         />
       </div>
-
-      {/* 2. 移除全局遮罩 (Clear View) */}
-      {/* 完全移除黑底遮罩，确保背景原色展示 */}
       
+      {/* 2. 沉浸模式全屏恢复点击层 */}
+      {/* 当 isImmersive 为 true 时，覆盖全屏的隐形层，点击即可恢复 UI */}
+      {isImmersive && (
+        <div 
+            className="fixed inset-0 z-30 cursor-pointer" 
+            onClick={() => setIsImmersive(false)}
+            aria-label="点击恢复界面"
+        />
+      )}
+
       {/* 3. 内容层 */}
       <div className="relative z-10">
         
-        {/* 顶部导航: 透明背景，避免遮挡头部 */}
-        <header className="fixed top-0 left-0 right-0 h-[52px] bg-transparent z-40 flex items-center justify-between px-4 pt-2 transition-all duration-300 pointer-events-none">
-          {/* 标题增加阴影 */}
-          <h1 className="text-[17px] font-semibold text-white tracking-tight drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">脸书小助手</h1>
+        {/* 顶部导航 */}
+        <header className="fixed top-0 left-0 right-0 h-[52px] bg-transparent z-40 flex items-center justify-between px-4 pt-2 transition-all duration-300">
+          {/* 标题：支持点击切换沉浸模式 */}
+          {/* active:scale-95 提供按压反馈，cursor-pointer 提示可点击 */}
+          <h1 
+            onClick={toggleImmersive}
+            className={`text-[17px] font-semibold text-white tracking-tight drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] cursor-pointer select-none transition-all duration-300 active:scale-95 active:opacity-70 ${isImmersive ? 'opacity-50 hover:opacity-100' : 'opacity-100'}`}
+            title="点击隐藏/显示界面"
+          >
+            脸书小助手
+          </h1>
           
-          <div className="pointer-events-auto flex items-center gap-1.5 pl-2 pr-2.5 py-1 rounded-full bg-black/40 border border-white/20 backdrop-blur-md shadow-lg">
+          {/* 右侧 IP 胶囊：在沉浸模式下淡出隐藏 */}
+          <div className={`flex items-center gap-1.5 pl-2 pr-2.5 py-1 rounded-full bg-black/40 border border-white/20 backdrop-blur-md shadow-lg transition-all duration-500 ease-in-out ${isImmersive ? 'opacity-0 translate-x-10 pointer-events-none' : 'opacity-100 translate-x-0'}`}>
             <div className="w-1.5 h-1.5 rounded-full bg-[#34C759] shadow-[0_0_6px_rgba(52,199,89,1)]"></div>
             <span className="text-[11px] font-semibold text-white/95 font-mono tracking-tight drop-shadow-md">{ipInfo.ip}</span>
           </div>
         </header>
 
-        <main className="max-w-[420px] mx-auto px-5 pt-24 pb-10 space-y-6">
+        {/* 主体内容：在沉浸模式下淡出并下沉 */}
+        <main 
+            className={`max-w-[420px] mx-auto px-5 pt-24 pb-10 space-y-6 transition-all duration-700 ease-in-out ${
+                isImmersive 
+                ? 'opacity-0 translate-y-[100px] pointer-events-none blur-sm scale-95' 
+                : 'opacity-100 translate-y-0 blur-0 scale-100'
+            }`}
+        >
           
           {!isInitialized ? (
             <div className="flex flex-col items-center justify-center py-32 space-y-4">
@@ -461,11 +397,7 @@ export default function GlassStylePage() {
             </div>
           ) : (
             <>
-              {/* 核心信息卡片: 
-                  - bg-black/20 (非常淡的黑底)
-                  - backdrop-blur-[2px] (微量模糊，接近透明玻璃)
-                  - 强阴影 shadow-2xl
-              */}
+              {/* 核心信息卡片 */}
               <section className="bg-black/20 backdrop-blur-[2px] rounded-[20px] overflow-hidden shadow-[0_8px_32px_rgba(0,0,0,0.5)] border border-white/20 transform-gpu isolate">
                 <InfoRow label="姓氏" value={userInfo.lastName} onCopy={() => copyToClipboard(userInfo.lastName, '姓氏')} isCopied={copiedField === '姓氏'} />
                 <InfoRow label="名字" value={userInfo.firstName} onCopy={() => copyToClipboard(userInfo.firstName, '名字')} isCopied={copiedField === '名字'} />
@@ -562,7 +494,7 @@ export default function GlassStylePage() {
                 </div>
               </button>
 
-              {/* 设置区域: 同样透明化处理 */}
+              {/* 设置区域 */}
               <section>
                 <div className="pl-5 mb-2 text-[13px] font-medium text-white/80 uppercase tracking-wide drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">生成设置</div>
                 <div className="bg-black/20 backdrop-blur-[2px] rounded-[18px] overflow-hidden shadow-lg shadow-black/20 border border-white/20 transform-gpu isolate">
