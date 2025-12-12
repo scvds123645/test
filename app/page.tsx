@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, memo, useRef, useMemo } from 'react';
+import { useState, useEffect, useCallback, memo, useRef, useMemo, useDeferredValue } from 'react';
 import { countries, CountryConfig } from '@/lib/countryData';
 import {
   generateName,
@@ -22,21 +22,25 @@ interface UserInfo {
   email: string;
 }
 
-// --- 图标组件 (SVG Paths) ---
-const ICON_PATHS: Record<string, React.ReactElement> = {
-  check: <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>,
-  chevronRight: <path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/>,
-  close: <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 17.59 13.41 12z"/>,
-  sparkles: <path d="M7 11v2l-4 1 4 1v2l1-4-1-4zm5-7v4l-3 1 3 1v4l2-5-2-5zm5.66 2.94L15 6.26l.66-2.94L18.34 6l2.66.68-2.66.68-.68 2.58-.66-2.94zM15 18l-2-3 2-3 2 3-2 3z"/>,
-  search: <path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>,
-  inbox: <path d="M19 3H4.99c-1.11 0-1.98.89-1.98 2L3 19c0 1.1.89 2 1.99 2H19c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 12h-4c0 1.66-1.35 3-3 3s-3-1.34-3-3H4.99V5H19v10z"/>,
-  link: <path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z"/>,
-  copy: <path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/>,
-  open: <path d="M19 19H5V5h7V3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2v-7h-2v7zM14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z"/>
+// --- 图标组件优化 (仅存储 Path 字符串，减少内存占用) ---
+const ICON_PATHS: Record<string, string> = {
+  check: "M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z",
+  chevronRight: "M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z",
+  close: "M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 17.59 13.41 12z",
+  sparkles: "M7 11v2l-4 1 4 1v2l1-4-1-4zm5-7v4l-3 1 3 1v4l2-5-2-5zm5.66 2.94L15 6.26l.66-2.94L18.34 6l2.66.68-2.66.68-.68 2.58-.66-2.94zM15 18l-2-3 2-3 2 3-2 3z",
+  search: "M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z",
+  inbox: "M19 3H4.99c-1.11 0-1.98.89-1.98 2L3 19c0 1.1.89 2 1.99 2H19c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 12h-4c0 1.66-1.35 3-3 3s-3-1.34-3-3H4.99V5H19v10z",
+  link: "M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z",
+  copy: "M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z",
+  open: "M19 19H5V5h7V3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2v-7h-2v7zM14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z"
 };
 
 const Icon = memo(({ name, className = "w-6 h-6" }: { name: string; className?: string }) => {
-  return (<svg className={className} viewBox="0 0 24 24" fill="currentColor">{ICON_PATHS[name]}</svg>);
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+      <path d={ICON_PATHS[name]} />
+    </svg>
+  );
 });
 Icon.displayName = 'Icon';
 
@@ -62,11 +66,8 @@ const InfoRow = memo(({ label, value, onCopy, isCopied, isLast = false }: {
         isCopied ? 'bg-blue-500/10' : 'bg-transparent hover:bg-white/5 active:bg-white/10'
       }`}
     >
-      {/* Label: Reduced opacity white */}
       <span className="text-[15px] font-medium text-white/50 w-20 shrink-0 tracking-tight">{label}</span>
-      
       <div className="flex items-center gap-3 min-w-0 flex-1 justify-end h-6 relative overflow-hidden">
-        {/* Value: High opacity white */}
         <span 
           className={`absolute right-0 text-[17px] font-medium truncate select-all tracking-tight transition-all duration-300 ${
             isCopied ? 'opacity-0 translate-y-4 scale-95' : 'opacity-100 translate-y-0 scale-100 text-white/90'
@@ -74,8 +75,6 @@ const InfoRow = memo(({ label, value, onCopy, isCopied, isLast = false }: {
         >
           {value || '---'}
         </span>
-
-        {/* 复制成功反馈 */}
         <div 
           className={`absolute right-0 flex items-center gap-1.5 transition-all duration-300 cubic-bezier-bounce ${
             isCopied ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 -translate-y-4 scale-90 pointer-events-none'
@@ -87,15 +86,13 @@ const InfoRow = memo(({ label, value, onCopy, isCopied, isLast = false }: {
           <span className="text-[15px] font-semibold text-[#34C759]">已复制</span>
         </div>
       </div>
-      
-      {/* Separator: Very subtle white line */}
       {!isLast && <div className="absolute bottom-0 left-5 right-0 h-[0.5px] bg-white/10" />}
     </div>
   );
 });
 InfoRow.displayName = 'InfoRow';
 
-// --- 组件: 通用底部弹窗 (Glassmorphism BottomSheet) ---
+// --- 组件: 通用底部弹窗 ---
 const BottomSheet = memo(({ 
   isOpen, 
   onClose, 
@@ -118,7 +115,7 @@ const BottomSheet = memo(({
         onClick={onClose} 
       />
       <div 
-        className="relative w-full max-w-md bg-[#0f172a]/80 backdrop-blur-xl border border-white/10 rounded-t-[24px] sm:rounded-[24px] max-h-[85vh] flex flex-col shadow-2xl animate-slide-up overflow-hidden will-change-transform transform-gpu"
+        className="relative w-full max-w-md bg-[#0f172a]/90 backdrop-blur-xl border border-white/10 rounded-t-[24px] sm:rounded-[24px] max-h-[85vh] flex flex-col shadow-2xl animate-slide-up overflow-hidden will-change-transform transform-gpu"
         style={{ boxShadow: '0 -10px 40px rgba(0,0,0,0.5)' }}
       >
         <div className="p-4 border-b border-white/10 sticky top-0 z-10 shrink-0 bg-inherit">
@@ -146,7 +143,7 @@ const BottomSheet = memo(({
 });
 BottomSheet.displayName = 'BottomSheet';
 
-// --- 组件: 列表项 (ListItem - Dark Mode) ---
+// --- 组件: 列表项 ---
 const ListItem = memo(({ 
   label, 
   isSelected, 
@@ -204,7 +201,7 @@ const CountryList = memo(({
 });
 CountryList.displayName = 'CountryList';
 
-// --- 组件: 域名选择列表 ---
+// --- 组件: 域名选择列表 (优化版: useDeferredValue) ---
 const DomainList = memo(({ 
   allDomains, 
   selectedDomain, 
@@ -215,16 +212,17 @@ const DomainList = memo(({
   onSelect: (d: string) => void; 
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
+  const deferredQuery = useDeferredValue(searchQuery);
   
   const filteredDomains = useMemo(() => {
-    if (!searchQuery) return allDomains;
-    const lowerQuery = searchQuery.toLowerCase();
+    if (!deferredQuery) return allDomains;
+    const lowerQuery = deferredQuery.toLowerCase();
+    // 限制结果数量，优化渲染
     return allDomains.filter(d => d.toLowerCase().includes(lowerQuery));
-  }, [allDomains, searchQuery]);
+  }, [allDomains, deferredQuery]);
 
   return (
     <div className="flex flex-col h-full">
-      {/* Search Bar - Glass Style */}
       <div className="px-4 pb-2 sticky top-0 z-10 bg-inherit">
          <div className="relative group">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -276,9 +274,10 @@ export default function GlassStylePage() {
   // --- State ---
   const [selectedCountry, setSelectedCountry] = useState<CountryConfig>(countries[0]);
   const [selectedDomain, setSelectedDomain] = useState<string>('random');
-  const [userInfo, setUserInfo] = useState<UserInfo>({
-    firstName: '', lastName: '', birthday: '', phone: '', password: '', email: ''
-  });
+  
+  // 初始状态为空，在 useEffect 中填充，解决 Hydration Mismatch
+  const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
+  
   const [showCountrySheet, setShowCountrySheet] = useState(false);
   const [showDomainSheet, setShowDomainSheet] = useState(false);
   
@@ -289,16 +288,26 @@ export default function GlassStylePage() {
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [inboxStatus, setInboxStatus] = useState<'idle' | 'opening'>('idle');
   
-  // 动画 Refs
+  // Refs
   const buttonRef = useRef<HTMLButtonElement>(null);
   const successContentRef = useRef<HTMLDivElement>(null);
   const normalContentRef = useRef<HTMLDivElement>(null);
-
   const copyTimerRef = useRef<NodeJS.Timeout | null>(null);
   const inboxTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // --- Logic ---
   
+  // 纯函数逻辑提取
+  const generateNewUser = useCallback((country: CountryConfig, domainChoice: string): UserInfo => {
+    const { firstName, lastName } = generateName(country.code);
+    const birthday = generateBirthday();
+    const phone = generatePhone(country);
+    const password = generatePassword();
+    const customDomain = domainChoice === 'random' ? undefined : domainChoice;
+    const email = generateEmail(firstName, lastName, customDomain);
+    return { firstName, lastName, birthday, phone, password, email };
+  }, []);
+
   const copyToClipboard = useCallback(async (text: string, label: string) => {
     haptic(30);
     try {
@@ -333,23 +342,12 @@ export default function GlassStylePage() {
     haptic(50);
     setCopiedField(null);
     triggerAnimation();
-
-    try {
-      const { firstName, lastName } = generateName(selectedCountry.code);
-      const birthday = generateBirthday();
-      const phone = generatePhone(selectedCountry);
-      const password = generatePassword();
-      const customDomain = selectedDomain === 'random' ? undefined : selectedDomain;
-      const email = generateEmail(firstName, lastName, customDomain);
-      
-      setUserInfo({ firstName, lastName, birthday, phone, password, email });
-    } catch (error) {
-      console.error(error);
-    }
-  }, [selectedCountry, selectedDomain, triggerAnimation]);
+    setUserInfo(generateNewUser(selectedCountry, selectedDomain));
+  }, [selectedCountry, selectedDomain, triggerAnimation, generateNewUser]);
 
   const handleInboxClick = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
+    if (!userInfo) return;
     if (inboxStatus === 'opening') return;
 
     haptic(30);
@@ -361,51 +359,45 @@ export default function GlassStylePage() {
         window.open(`https://yopmail.com/?login=${emailName}`, '_blank');
         setInboxStatus('idle');
     }, 600);
-  }, [userInfo.email, inboxStatus]);
+  }, [userInfo, inboxStatus]);
 
-  // 初始化逻辑
+  // 初始化逻辑：并行执行数据生成和IP获取
   useEffect(() => {
     let isMounted = true;
-    const initializeApp = async () => {
+    
+    // 1. 立即生成初始数据 (客户端侧执行)
+    const initialCountry = countries[0];
+    const initialData = generateNewUser(initialCountry, 'random');
+    if (isMounted) {
+      setUserInfo(initialData);
+      setIsInitialized(true);
+    }
+
+    // 2. 异步获取 IP，获取成功后仅当国家变更时更新
+    const initializeIp = async () => {
       try {
         const response = await fetch('/api/ip-info');
         const data = await response.json();
         if (!isMounted) return;
         
         setIpInfo({ ip: data.ip || '未知', country: data.country || 'US' });
+        
         if (data.country && data.accurate) {
           const detectedCountry = getCountryConfig(data.country);
-          if (detectedCountry) setSelectedCountry(detectedCountry);
+          // 如果检测到的国家与默认不同，更新国家并重新生成
+          if (detectedCountry && detectedCountry.code !== initialCountry.code) {
+             setSelectedCountry(detectedCountry);
+             setUserInfo(generateNewUser(detectedCountry, 'random'));
+          }
         }
-        setIsInitialized(true);
       } catch (error) {
-        if (isMounted) {
-          setIpInfo({ ip: '检测失败', country: 'US' });
-          setIsInitialized(true);
-        }
+        // 出错静默失败，保持默认状态
       }
     };
-    initializeApp();
+    
+    initializeIp();
     return () => { isMounted = false; };
-  }, []);
-
-  useEffect(() => {
-    if (isInitialized && !userInfo.firstName) {
-        try {
-            const { firstName, lastName } = generateName(selectedCountry.code);
-            const birthday = generateBirthday();
-            const phone = generatePhone(selectedCountry);
-            const password = generatePassword();
-            const customDomain = selectedDomain === 'random' ? undefined : selectedDomain;
-            const email = generateEmail(firstName, lastName, customDomain);
-            setUserInfo({ firstName, lastName, birthday, phone, password, email });
-        } catch (e) { console.error(e); }
-    }
-  }, [isInitialized, userInfo.firstName, selectedCountry, selectedDomain]);
-
-  useEffect(() => {
-    if (isInitialized && userInfo.firstName) generate();
-  }, [selectedCountry.code]);
+  }, []); // 仅 Mount 执行一次
 
   const allDomains = useMemo(() => getAllDomains(), []);
   const displayDomain = selectedDomain === 'random' ? '随机' : selectedDomain;
@@ -414,7 +406,9 @@ export default function GlassStylePage() {
     haptic(20);
     setSelectedCountry(country);
     setShowCountrySheet(false);
-  }, []);
+    // 切换国家时自动生成新数据，提升体验
+    setUserInfo(generateNewUser(country, selectedDomain));
+  }, [selectedDomain, generateNewUser]);
 
   const handleDomainSelect = useCallback((domain: string) => {
     haptic(20);
@@ -424,28 +418,27 @@ export default function GlassStylePage() {
 
   // --- Render ---
   return (
-    // Global Background: Dark Gradient
     <div className="min-h-screen bg-gradient-to-br from-[#0f172a] via-[#1e1b4b] to-[#312e81] font-sans text-white pb-10 selection:bg-blue-400/30 overflow-x-hidden touch-pan-y">
       
-      {/* 顶部导航: Glass Effect */}
+      {/* 顶部导航 */}
       <header className="fixed top-0 left-0 right-0 h-[52px] bg-[#0f172a]/60 backdrop-blur-md border-b border-white/10 z-40 flex items-center justify-center transition-all duration-300 isolate">
         <h1 className="text-[17px] font-semibold text-white/90 tracking-tight drop-shadow-md">脸书小助手</h1>
-        
         <div className="absolute right-4 flex items-center gap-1.5 pl-2 pr-2.5 py-1 rounded-full bg-white/10 border border-white/10 backdrop-blur-md shadow-sm">
-          <div className="w-1.5 h-1.5 rounded-full bg-[#34C759] shadow-[0_0_6px_rgba(52,199,89,0.8)]"></div>
+          <div className={`w-1.5 h-1.5 rounded-full shadow-[0_0_6px_rgba(52,199,89,0.8)] ${ipInfo.ip !== '...' ? 'bg-[#34C759]' : 'bg-yellow-500'}`}></div>
           <span className="text-[11px] font-semibold text-white/70 font-mono tracking-tight">{ipInfo.ip}</span>
         </div>
       </header>
 
       <main className="max-w-[420px] mx-auto px-5 pt-24 pb-10 space-y-6">
         
-        {!isInitialized ? (
+        {/* 加载状态或内容 */}
+        {!isInitialized || !userInfo ? (
           <div className="flex flex-col items-center justify-center py-32 space-y-4">
             <div className="w-8 h-8 border-[3px] border-white/10 border-t-[#007AFF] rounded-full animate-spin"></div>
           </div>
         ) : (
           <>
-            {/* 核心信息卡片: Glassmorphism */}
+            {/* 核心信息卡片 */}
             <section className="bg-white/5 backdrop-blur-md rounded-[20px] overflow-hidden shadow-[0_8px_32px_rgba(0,0,0,0.2)] border border-white/10 transform-gpu isolate">
               <InfoRow label="姓氏" value={userInfo.lastName} onCopy={() => copyToClipboard(userInfo.lastName, '姓氏')} isCopied={copiedField === '姓氏'} />
               <InfoRow label="名字" value={userInfo.firstName} onCopy={() => copyToClipboard(userInfo.firstName, '名字')} isCopied={copiedField === '名字'} />
@@ -504,11 +497,10 @@ export default function GlassStylePage() {
               </div>
             </section>
 
-            {/* 主要操作按钮: Glassy Gradient */}
+            {/* 主要操作按钮 */}
             <button
               ref={buttonRef}
               onClick={generate}
-              disabled={!isInitialized}
               className="w-full py-4 rounded-[18px] shadow-[0_0_20px_rgba(0,122,255,0.3)] border border-white/20 flex items-center justify-center gap-2.5 transform-gpu touch-manipulation overflow-hidden relative active:scale-[0.96] active:brightness-90 bg-gradient-to-b from-[#007AFF] to-[#0055b3] hover:scale-[1.01] hover:brightness-110 transition-transform duration-100"
             >
               {/* 正常状态内容 */}
@@ -535,14 +527,14 @@ export default function GlassStylePage() {
                   </span>
               </div>
               
-              {/* 占位符 */}
+              {/* 占位符 (保持高度) */}
               <div className="opacity-0 pointer-events-none flex items-center gap-2.5">
                   <Icon name="sparkles" className="w-5 h-5" />
                   <span className="text-[17px] font-semibold">生成新身份</span>
               </div>
             </button>
 
-            {/* 设置区域: Glassmorphism */}
+            {/* 设置区域 */}
             <section>
               <div className="pl-5 mb-2 text-[13px] font-medium text-white/40 uppercase tracking-wide">生成设置</div>
               <div className="bg-white/5 backdrop-blur-md rounded-[18px] overflow-hidden shadow-lg shadow-black/10 border border-white/10 transform-gpu isolate">
@@ -627,7 +619,6 @@ export default function GlassStylePage() {
         .cubic-bezier-bounce {
           transition-timing-function: cubic-bezier(0.34, 1.56, 0.64, 1);
         }
-        /* --- 按钮动画 Keyframes --- */
         
         @keyframes btn-bg-success {
           0% { 
