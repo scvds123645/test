@@ -1,22 +1,41 @@
 import { countries, namesByCountry, CountryConfig } from '@/lib/countryData';
 import { DOMAINS } from '@/lib/domains';
 
-// --- 静态常量定义 (内存优化：避免在函数调用时重复创建) ---
+// --- 静态常量定义 (内存优化 & 行为模拟) ---
 
 const LATIN_CHARS = "abcdefghijklmnopqrstuvwxyz";
-const UPPERCASE = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-const NUMBERS = "0123456789";
 
-// 常见的真实密码词汇
+// 1. 增强的密码基础词汇库
+// 真实用户倾向于使用季节、自然、积极词汇，且首字母大写
+const PASSWORD_BASE_WORDS = [
+  'Summer', 'Winter', 'Autumn', 'Spring', 'Freedom', 'Garden', 'Monster', 'Rocket',
+  'Shadow', 'Spirit', 'Sunset', 'Sunrise', 'System', 'Secret', 'Sister', 'Brother',
+  'Family', 'Friend', 'School', 'Office', 'Coffee', 'Cookie', 'Guitar', 'Piano',
+  'Soccer', 'Winner', 'Master', 'Doctor', 'Driver', 'Player', 'Action', 'Energy',
+  'Happy', 'Strong', 'Lovely', 'Dragon', 'Tiger', 'Eagle', 'Panda', 'Monkey',
+  'Space', 'Earth', 'World', 'Ocean', 'River', 'Forest', 'Flower', 'Cherry',
+  'Apple', 'Banana', 'Orange', 'Lemon', 'Melon', 'Berry', 'Grape', 'Peach',
+  'King', 'Queen', 'Prince', 'Angel', 'Magic', 'Power', 'Super', 'Lucky'
+];
+
+// 2. 备用名字库 (关键修复：防止非拉丁字符转写失败产生乱码)
+// 当输入的名字无法转换为 ASCII (如纯韩文/中文) 时，使用这些名字代替
+const FALLBACK_NAMES = [
+  'alex', 'sam', 'jordan', 'taylor', 'casey', 'jamie', 'morgan', 'riley', 
+  'quinn', 'avery', 'parker', 'bailey', 'skyler', 'charlie', 'dakota',
+  'reese', 'zion', 'remy', 'elias', 'sawyer', 'amara', 'finley', 'river',
+  'lee', 'kim', 'chen', 'singh', 'patel', 'wang', 'garcia', 'lopez',
+  'james', 'john', 'robert', 'michael', 'william', 'david', 'richard',
+  'mary', 'patricia', 'jennifer', 'linda', 'elizabeth', 'barbara', 'susan',
+  'thomas', 'jessica', 'sarah', 'karen', 'nancy', 'lisa', 'betty'
+];
+
+// FB 允许且用户常用的安全符号（避免使用 ^ ~ 等输入困难的符号）
+const SAFE_SPECIAL_CHARS = ['!', '@', '#', '$', '*', '.'];
+
+// 简单的备用词汇
 const COMMON_WORDS = [
-  'love', 'life', 'star', 'moon', 'king', 'cool', 'super', 'happy', 'lucky', 'smart',
-  'dream', 'angel', 'power', 'magic', 'light', 'dark', 'blue', 'fire', 'water', 'earth',
-  'smile', 'peace', 'hope', 'faith', 'trust', 'grace', 'brave', 'strong', 'free', 'wild',
-  'shine', 'gold', 'heart', 'soul', 'mind', 'time', 'wave', 'wind', 'rain', 'snow',
-  'sun', 'sky', 'sea', 'ocean', 'storm', 'cloud', 'thunder', 'flash', 'spark', 'flame',
-  'star', 'night', 'day', 'summer', 'winter', 'spring', 'fall', 'baby', 'sweet', 'honey',
-  'sugar', 'candy', 'rose', 'lily', 'diamond', 'pearl', 'ruby', 'crystal', 'tiger', 'lion',
-  'wolf', 'bear', 'eagle', 'dragon', 'phoenix', 'prince', 'princess', 'queen', 'royal', 'crown'
+  'love', 'life', 'sky', 'blue', 'fire', 'cool', 'dream', 'star', 'moon'
 ];
 
 // 年龄分布权重
@@ -26,6 +45,9 @@ const AGE_DISTRIBUTION = [
   { min: 22, max: 23, weight: 0.30 },
   { min: 24, max: 25, weight: 0.25 },
 ];
+
+const DAYS_IN_MONTH_BASE = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+const SUSPICIOUS_DAYS = [1, 15, 31];
 
 // --- 手机号运营商前缀数据 (2024-2025 真实号段) ---
 
@@ -226,9 +248,6 @@ const SG_PREFIXES = {
   m1: ['88', '89']
 };
 
-const DAYS_IN_MONTH_BASE = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
-const SUSPICIOUS_DAYS = [1, 15, 31];
-
 // --- 辅助函数 ---
 
 function getRandomCarrierPrefix(carriers: Record<string, string[]>): string {
@@ -237,16 +256,22 @@ function getRandomCarrierPrefix(carriers: Record<string, string[]>): string {
   return randomChoice(carriers[carrier]);
 }
 
+/**
+ * 修正版转写函数
+ * 逻辑：只保留拉丁字母。如果结果为空或过短（例如非拉丁语系名字且无法转写），
+ * 则从 FALLBACK_NAMES 中随机选择一个真实英文名，而不是生成随机乱码。
+ */
 function convertToLatinChars(str: string): string {
+  if (!str) {
+    return randomChoice(FALLBACK_NAMES);
+  }
   const normalized = str.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
   const ascii = normalized.replace(/[^a-zA-Z0-9]/g, "");
   
-  if (ascii.length === 0) {
-    let result = "";
-    for (let i = 0; i < 5; i++) {
-      result += LATIN_CHARS.charAt(Math.floor(Math.random() * LATIN_CHARS.length));
-    }
-    return result;
+  // 关键修复：如果转换后长度 < 2，说明原名是非拉丁字符（如纯中文）
+  // 此时返回一个真实的备用名，而不是随机字符
+  if (ascii.length < 2) {
+    return randomChoice(FALLBACK_NAMES);
   }
   return ascii.toLowerCase();
 }
@@ -272,6 +297,10 @@ function randomDigits(length: number, min: number = 0, max: number = 9): string 
     result += randomDigit(min, max);
   }
   return result;
+}
+
+function capitalize(str: string): string {
+  return str.charAt(0).toUpperCase() + str.slice(1);
 }
 
 // --- 导出函数 ---
@@ -465,42 +494,53 @@ export function generatePhone(country: CountryConfig) {
   }
 }
 
+/**
+ * 优化版密码生成：
+ * 目的：通过图灵测试，模拟真实人类的密码习惯
+ * 策略：避免完全随机的字符堆叠，使用"有意义的单词 + 数字/年份 + 常见符号"
+ */
 export function generatePassword(): string {
-  const targetLength = secureRandom(6, 8);
+  const scheme = Math.random();
   let password = '';
   
-  let word = randomChoice(COMMON_WORDS);
+  // 随机年份 (1985 - 2024) 模拟纪念日
+  const yearSuffix = secureRandom(1985, 2024).toString();
+  const simpleSuffix = randomDigits(secureRandom(2, 4));
+  const specialChar = randomChoice(SAFE_SPECIAL_CHARS);
+  const baseWord = randomChoice(PASSWORD_BASE_WORDS);
   
-  const numLength = secureRandom(1, targetLength - 3 > 1 ? targetLength - 3 : 2);
-  const maxWordLen = targetLength - numLength;
+  // 方案 A (40%): 标准强密码格式 -> "Summer@2023"
+  if (scheme < 0.4) {
+    password = `${baseWord}${specialChar}${yearSuffix}`;
+  }
+  
+  // 方案 B (30%): 单词+简单数字 -> "Tiger1234"
+  else if (scheme < 0.7) {
+    password = `${baseWord}${randomDigit(1, 9)}${randomDigits(2)}`;
+    // 确保首字母大写
+    password = capitalize(password); 
+  }
+  
+  // 方案 C (20%): 两个单词组合 -> "BlueSky99"
+  else if (scheme < 0.9) {
+    let secondWord = randomChoice(COMMON_WORDS);
+    secondWord = secondWord.charAt(0).toUpperCase() + secondWord.slice(1);
+    password = `${baseWord}${secondWord}${randomDigits(2)}`;
+  }
+  
+  // 方案 D (10%): 混合杂凑（模拟老式密码习惯） -> "P@ssw0rd1" 风格
+  else {
+    let word = randomChoice(COMMON_WORDS);
+    // 简单的字符替换，模拟人类行为
+    word = word.replace(/a/g, '@').replace(/o/g, '0').replace(/i/g, '1').replace(/e/g, '3');
+    password = `${capitalize(word)}${randomDigits(3)}`;
+  }
 
-  if (word.length > maxWordLen) {
-    word = word.substring(0, maxWordLen);
-  }
-  
-  const caseRand = Math.random();
-  if (caseRand < 0.60) {
-    word = word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
-  } else if (caseRand < 0.90) {
-    word = word.toLowerCase();
-  } else {
-    word = word.toUpperCase();
-  }
-  
-  password = word;
-  
-  while (password.length < targetLength) {
+  // 最终兜底：Facebook 建议 8 位以上
+  while (password.length < 8) {
     password += randomDigit();
   }
 
-  if (password.length > targetLength) {
-    password = password.substring(0, targetLength);
-  } else if (password.length < targetLength) {
-    while (password.length < targetLength) {
-      password += randomDigit();
-    }
-  }
-  
   return password;
 }
 
@@ -512,78 +552,83 @@ export function getAllDomains(): string[] {
   return DOMAINS;
 }
 
-// 优化版邮箱生成函数 - 无分隔符,格式如 ramesh57
+/**
+ * 优化版邮箱生成：
+ * 目的：避免 Facebook 检测 (禁止使用 . 或 _ 分隔符)，彻底修复乱码问题
+ * 策略：
+ * 1. 模拟真实用户注册行为 (名字缩写、加年份、加幸运数字)
+ * 2. 如果名字含有无法转写的非拉丁字符，使用 FALLBACK_NAMES 代替，杜绝生成乱码
+ */
 export function generateEmail(firstName: string, lastName: string, customDomain?: string) {
-  const domain = customDomain || DOMAINS[secureRandom(0, DOMAINS.length - 1)];
-
+  const domain = customDomain || randomChoice(DOMAINS);
+  
+  // 1. 数据清洗：转为纯拉丁字母，若失败则使用备用库
   let first = convertToLatinChars(firstName);
   let last = convertToLatinChars(lastName);
   
-  if (first.length > 6) first = first.slice(0, Math.max(4, secureRandom(4, 6)));
-  if (last.length > 6) last = last.slice(0, Math.max(4, secureRandom(4, 6)));
+  // 2. 模拟真实用户的命名截断习惯
+  // 比如 "Christopher" 太长，用户可能会输入 "chris"
+  if (first.length > 8 && Math.random() > 0.5) first = first.slice(0, secureRandom(4, 6));
+  if (last.length > 8 && Math.random() > 0.5) last = last.slice(0, secureRandom(4, 6));
 
-  const MAX_LEN = 11;
-
-  const patternRand = Math.random();
+  const birthYear = secureRandom(1980, 2005); 
+  const currentYear = new Date().getFullYear();
+  const randomNum2 = randomDigits(2);
+  const randomNum3 = randomDigits(3);
+  
   let username = '';
+  const pattern = Math.random();
+
+  // --- 模式选择 (基于真实用户习惯分布) ---
+
+  // 模式 1: 全名 + 年份 (35%) -> davidwang1995
+  if (pattern < 0.35) {
+    username = `${first}${last}${birthYear}`;
+  }
   
-  // 模式1: firstname + 数字 (40%)
-  if (patternRand < 0.40) {
-    username = first;
+  // 模式 2: 名字 + 姓氏首字母 + 数字 (25%) -> sarahj82
+  else if (pattern < 0.60) {
+    username = `${first}${last.charAt(0)}${randomNum2}`;
   }
-  // 模式2: 首字母 + lastname (25%)
-  else if (patternRand < 0.65) {
-    username = `${first.charAt(0)}${last}`;
+  
+  // 模式 3: 姓 + 名 + 短数字 (15%) -> wangdavid23
+  else if (pattern < 0.75) {
+    username = `${last}${first}${secureRandom(1, 99)}`;
   }
-  // 模式3: firstname + 首字母 (15%)
-  else if (patternRand < 0.80) {
-    username = `${first}${last.charAt(0)}`;
-  }
-  // 模式4: 短拼接 (15%)
-  else if (patternRand < 0.95) {
-    if (first.length + last.length < 9) {
-       username = `${first}${last}`;
-    } else {
-       username = first;
+  
+  // 模式 4: 极简模式 (15%) -> alberteinstein
+  else if (pattern < 0.90) {
+    username = `${first}${last}`;
+    // 如果组合起来太短，必须加点东西
+    if (username.length < 6) {
+      username += randomNum3;
+    } else if (Math.random() > 0.7) {
+      username += randomDigit();
     }
   }
-  // 模式5: 创意组合 (5%)
+  
+  // 模式 5: 临时/年份后缀 (10%) -> jason2024
   else {
-    username = `${last}${first.charAt(0)}`;
+    username = `${first}${currentYear}`;
   }
 
-  if (username.length > MAX_LEN) {
-    username = username.slice(0, MAX_LEN);
-  }
-
-  const remainingSpace = MAX_LEN - username.length;
+  // --- 最终约束检查 ---
   
-  if (remainingSpace >= 2) {
-    if (Math.random() < 0.70 || username.length < 5) {
-      let suffix = '';
-      const lenToGenerate = Math.min(remainingSpace, secureRandom(2, 4));
-      
-      if (lenToGenerate === 4) {
-        suffix = secureRandom(1985, 2025).toString();
-      } else {
-        suffix = randomDigits(lenToGenerate);
-      }
-      
-      if (username.length + suffix.length <= MAX_LEN) {
-        username += suffix;
-      }
+  // 1. 再次确保无非字母数字字符
+  username = username.replace(/[^a-z0-9]/g, '');
+
+  // 2. 长度控制 (FB 最佳区间 6-20)
+  if (username.length > 20) {
+    username = username.slice(0, 20);
+    // 截断后如果末尾是数字可能不完整，补一个字母
+    if (/[0-9]/.test(username.slice(-1))) {
+      username += 'x';
     }
   }
 
-  if (username.length > MAX_LEN) {
-    username = username.slice(0, MAX_LEN);
-  }
-  
+  // 3. 长度不足补齐
   while (username.length < 6) {
-    username += randomDigit();
-  }
-  if (username.length > MAX_LEN) {
-     username = username.slice(0, MAX_LEN);
+    username += randomChoice(['a', 'b', 'c', '1', '2', '3']);
   }
 
   return `${username}@${domain}`;
