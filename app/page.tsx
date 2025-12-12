@@ -32,7 +32,7 @@ const ICON_PATHS: Record<string, React.ReactElement> = {
   inbox: <path d="M19 3H4.99c-1.11 0-1.98.89-1.98 2L3 19c0 1.1.89 2 1.99 2H19c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 12h-4c0 1.66-1.35 3-3 3s-3-1.34-3-3H4.99V5H19v10z"/>,
   link: <path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z"/>,
   copy: <path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/>,
-  open: <path d="M19 19H5V5h7V3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2v-7h-2v7zM14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z"/>
+  open: <path d="M19 19H5V5h7V3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2v-7h-2v7zM14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z"/>
 };
 
 const Icon = memo(({ name, className = "w-6 h-6" }: { name: string; className?: string }) => {
@@ -46,6 +46,54 @@ const haptic = (duration: number = 15) => {
     navigator.vibrate(duration);
   } 
 };
+
+// --- 组件: 流星雨背景 ---
+const StarBackground = memo(() => {
+  const [stars, setStars] = useState<Array<{
+    top: string;
+    duration: string;
+    delay: string;
+    tailLength: string;
+  }>>([]);
+
+  useEffect(() => {
+    // 客户端生成随机数据，数量控制在30个以保证移动端性能
+    const starCount = 30; 
+    const newStars = new Array(starCount).fill(0).map(() => {
+      // 对应 SCSS: random_range(500em, 750em) / 100
+      const tailLength = (Math.random() * (7.5 - 5) + 5).toFixed(2); 
+      // 对应 SCSS: random_range(0vh, 10000vh) / 100
+      const top = (Math.random() * 100).toFixed(2);
+      // 对应 SCSS: random_range(6000, 12000s) / 1000
+      const duration = (Math.random() * (12 - 6) + 6).toFixed(2);
+      // 对应 SCSS: random_range(0, 10000s) / 1000
+      const delay = (Math.random() * 10).toFixed(2);
+      
+      return { top, duration, delay, tailLength };
+    });
+    setStars(newStars);
+  }, []);
+
+  return (
+    <div className="fixed inset-0 z-[5] pointer-events-none overflow-hidden">
+      <div className="stars-container">
+        {stars.map((star, i) => (
+          <div
+            key={i}
+            className="star"
+            style={{
+              '--top-offset': `${star.top}vh`,
+              '--fall-duration': `${star.duration}s`,
+              '--fall-delay': `${star.delay}s`,
+              '--star-tail-length': `${star.tailLength}em`,
+            } as React.CSSProperties}
+          />
+        ))}
+      </div>
+    </div>
+  );
+});
+StarBackground.displayName = 'StarBackground';
 
 // --- 组件: 信息行 ---
 const InfoRow = memo(({ label, value, onCopy, isCopied, isLast = false }: {
@@ -113,6 +161,7 @@ const BottomSheet = memo(({
         className="absolute inset-0 bg-black/40 transition-opacity duration-300" 
         onClick={onClose} 
       />
+      
       <div 
         className="relative w-full max-w-md bg-black/40 border border-white/20 rounded-t-[24px] sm:rounded-[24px] max-h-[85vh] flex flex-col shadow-2xl animate-slide-up overflow-hidden will-change-transform transform-gpu"
       >
@@ -216,11 +265,8 @@ export default function GlassStylePage() {
   
   // 沉浸模式
   const [isImmersive, setIsImmersive] = useState(false);
-  
-  // 背景图相关
+  // 背景图加载状态
   const [bgLoaded, setBgLoaded] = useState(false);
-  const [bgUrl, setBgUrl] = useState(''); // 新增：专门存带时间戳的 URL
-  const imgRef = useRef<HTMLImageElement>(null);
   
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [inboxStatus, setInboxStatus] = useState<'idle' | 'opening'>('idle');
@@ -232,18 +278,6 @@ export default function GlassStylePage() {
   const inboxTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // --- Logic ---
-  
-  // 【修复核心】组件挂载时，生成唯一时间戳，强制浏览器不缓存图片
-  useEffect(() => {
-    // 1. 设置带时间戳的 URL
-    setBgUrl(`https://loliapi.com/acg/?t=${Date.now()}`);
-    
-    // 2. 检查图片缓存状态 (修复 iOS 缓存不触发 onLoad)
-    if (imgRef.current && imgRef.current.complete) {
-      setBgLoaded(true);
-    }
-  }, []);
-
   const toggleImmersive = useCallback(() => {
     haptic(20);
     setIsImmersive(prev => !prev);
@@ -349,23 +383,21 @@ export default function GlassStylePage() {
   return (
     <div className="min-h-screen relative font-sans text-white pb-10 selection:bg-blue-400/30 overflow-x-hidden touch-pan-y">
       
-      {/* 1. 背景层 (已修复 Safari 缓存和 iOS 显示问题) */}
-      <div className="fixed inset-0 z-0 pointer-events-none bg-gradient-to-br from-[#0f172a] via-[#1e1b4b] to-[#312e81] transform-gpu">
-        {bgUrl && (
-          <img 
-            ref={imgRef}
-            src={bgUrl} 
-            alt="background" 
-            referrerPolicy="no-referrer"
-            className={`w-full h-full object-cover transition-opacity duration-1000 ease-in-out ${bgLoaded ? 'opacity-100' : 'opacity-0'}`}
-            decoding="async"
-            onLoad={() => setBgLoaded(true)}
-            onError={() => setBgLoaded(false)}
-          />
-        )}
+      {/* 1. 背景层 (z-0) */}
+      <div className="fixed inset-0 z-0 pointer-events-none bg-gradient-to-br from-[#0f172a] via-[#1e1b4b] to-[#312e81]">
+        <img 
+          src="https://loliapi.com/acg/" 
+          alt="background" 
+          className={`w-full h-full object-cover transition-opacity duration-1000 ease-in-out ${bgLoaded ? 'opacity-100' : 'opacity-0'}`}
+          decoding="async"
+          onLoad={() => setBgLoaded(true)}
+        />
       </div>
       
-      {/* 2. 沉浸模式恢复层 */}
+      {/* 2. 流星雨层 (z-5) - 放在背景图和内容之间 */}
+      <StarBackground />
+
+      {/* 3. 沉浸模式恢复层 (z-30) */}
       {isImmersive && (
         <div 
             className="fixed inset-0 z-30 cursor-pointer" 
@@ -373,7 +405,7 @@ export default function GlassStylePage() {
         />
       )}
 
-      {/* 3. 内容层 */}
+      {/* 4. 内容层 (z-10及以上) */}
       <div className="relative z-10">
         
         <header className="fixed top-0 left-0 right-0 h-[52px] bg-transparent z-40 flex items-center justify-between px-4 pt-2 transition-all duration-300">
@@ -572,6 +604,7 @@ export default function GlassStylePage() {
       </BottomSheet>
 
       <style jsx global>{`
+        /* --- 原有动画 --- */
         @keyframes slide-up { from { transform: translateY(100%); } to { transform: translateY(0); } }
         .animate-slide-up { animation: slide-up 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
         
@@ -613,6 +646,85 @@ export default function GlassStylePage() {
         }
         .anim-slide-success {
           animation: slide-success-cycle 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+        }
+
+        /* --- 流星雨动画 CSS (由 SCSS 转换而来) --- */
+        .stars-container {
+          position: fixed;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 120%;
+          transform: rotate(-45deg);
+          contain: strict;
+        }
+
+        .star {
+          --star-color: rgba(255, 255, 255, 0.8);
+          --star-tail-height: 2px;
+          --star-width: calc(var(--star-tail-length) / 6);
+          
+          position: absolute;
+          top: var(--top-offset);
+          left: 0;
+          width: var(--star-tail-length);
+          height: var(--star-tail-height);
+          color: var(--star-color);
+          background: linear-gradient(45deg, currentColor, transparent);
+          border-radius: 50%;
+          filter: drop-shadow(0 0 6px currentColor);
+          transform: translate3d(120em, 0, 0); /* 起始位置在屏幕外 */
+          will-change: transform;
+          
+          /* 桌面端默认动画: 包含拖尾渐变 */
+          animation: fall var(--fall-duration) var(--fall-delay) linear infinite, tail-fade var(--fall-duration) var(--fall-delay) ease-out infinite;
+        }
+
+        /* 移动端性能优化: 移除 tail-fade，只保留位移 */
+        @media screen and (max-width: 750px) {
+          .star {
+            animation: fall var(--fall-duration) var(--fall-delay) linear infinite;
+          }
+        }
+
+        .star::before, .star::after {
+          position: absolute;
+          content: '';
+          top: 0;
+          left: calc(var(--star-width) / -2);
+          width: var(--star-width);
+          height: 100%;
+          background: linear-gradient(45deg, transparent, currentColor, transparent);
+          border-radius: inherit;
+          animation: blink 2s linear infinite;
+        }
+
+        .star::before { transform: rotate(45deg); }
+        .star::after { transform: rotate(-45deg); }
+
+        @keyframes fall {
+          to {
+            transform: translate3d(-50em, 0, 0); /* 终点位置 */
+          }
+        }
+
+        @keyframes tail-fade {
+          0%, 50% {
+            width: var(--star-tail-length);
+            opacity: 1;
+          }
+          70%, 80% {
+            width: 0;
+            opacity: 0.4;
+          }
+          100% {
+            width: 0;
+            opacity: 0;
+          }
+        }
+
+        @keyframes blink {
+          50% { opacity: 0.6; }
         }
       `}</style>
     </div>
