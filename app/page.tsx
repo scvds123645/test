@@ -201,7 +201,7 @@ const CountryList = memo(({
 });
 CountryList.displayName = 'CountryList';
 
-// --- 组件: 域名选择列表 (优化版: useDeferredValue) ---
+// --- 组件: 域名选择列表 (UseDeferredValue 优化) ---
 const DomainList = memo(({ 
   allDomains, 
   selectedDomain, 
@@ -217,7 +217,6 @@ const DomainList = memo(({
   const filteredDomains = useMemo(() => {
     if (!deferredQuery) return allDomains;
     const lowerQuery = deferredQuery.toLowerCase();
-    // 限制结果数量，优化渲染
     return allDomains.filter(d => d.toLowerCase().includes(lowerQuery));
   }, [allDomains, deferredQuery]);
 
@@ -274,8 +273,6 @@ export default function GlassStylePage() {
   // --- State ---
   const [selectedCountry, setSelectedCountry] = useState<CountryConfig>(countries[0]);
   const [selectedDomain, setSelectedDomain] = useState<string>('random');
-  
-  // 初始状态为空，在 useEffect 中填充，解决 Hydration Mismatch
   const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
   
   const [showCountrySheet, setShowCountrySheet] = useState(false);
@@ -361,43 +358,48 @@ export default function GlassStylePage() {
     }, 600);
   }, [userInfo, inboxStatus]);
 
-  // 初始化逻辑：并行执行数据生成和IP获取
+  // --- 初始化核心逻辑 (先检测 IP，后生成数据) ---
   useEffect(() => {
     let isMounted = true;
-    
-    // 1. 立即生成初始数据 (客户端侧执行)
-    const initialCountry = countries[0];
-    const initialData = generateNewUser(initialCountry, 'random');
-    if (isMounted) {
-      setUserInfo(initialData);
-      setIsInitialized(true);
-    }
 
-    // 2. 异步获取 IP，获取成功后仅当国家变更时更新
-    const initializeIp = async () => {
+    const startInitialization = async () => {
+      let targetCountry = countries[0]; // 默认使用列表第一个国家 (通常是 US)
+
       try {
+        // 1. 发起 IP 检测请求
         const response = await fetch('/api/ip-info');
         const data = await response.json();
+        
         if (!isMounted) return;
-        
+
+        // 更新 IP 显示
         setIpInfo({ ip: data.ip || '未知', country: data.country || 'US' });
-        
+
+        // 2. 如果检测到有效且准确的国家，更新目标国家
         if (data.country && data.accurate) {
           const detectedCountry = getCountryConfig(data.country);
-          // 如果检测到的国家与默认不同，更新国家并重新生成
-          if (detectedCountry && detectedCountry.code !== initialCountry.code) {
-             setSelectedCountry(detectedCountry);
-             setUserInfo(generateNewUser(detectedCountry, 'random'));
+          if (detectedCountry) {
+            targetCountry = detectedCountry;
           }
         }
       } catch (error) {
-        // 出错静默失败，保持默认状态
+        // 失败时仅更新 IP 显示为错误状态，国家保持默认
+        if (isMounted) setIpInfo({ ip: '检测失败', country: 'US' });
+      } finally {
+        // 3. 最终统一生成数据并结束加载状态
+        // 这样确保用户看到的第一屏数据就是属于目标国家的，没有闪烁
+        if (isMounted) {
+          setSelectedCountry(targetCountry);
+          setUserInfo(generateNewUser(targetCountry, 'random'));
+          setIsInitialized(true);
+        }
       }
     };
+
+    startInitialization();
     
-    initializeIp();
     return () => { isMounted = false; };
-  }, []); // 仅 Mount 执行一次
+  }, [generateNewUser]); 
 
   const allDomains = useMemo(() => getAllDomains(), []);
   const displayDomain = selectedDomain === 'random' ? '随机' : selectedDomain;
@@ -406,7 +408,7 @@ export default function GlassStylePage() {
     haptic(20);
     setSelectedCountry(country);
     setShowCountrySheet(false);
-    // 切换国家时自动生成新数据，提升体验
+    // 切换国家时自动生成新数据
     setUserInfo(generateNewUser(country, selectedDomain));
   }, [selectedDomain, generateNewUser]);
 
@@ -431,10 +433,11 @@ export default function GlassStylePage() {
 
       <main className="max-w-[420px] mx-auto px-5 pt-24 pb-10 space-y-6">
         
-        {/* 加载状态或内容 */}
+        {/* 加载状态 (等待 IP 检测) 或 内容显示 */}
         {!isInitialized || !userInfo ? (
           <div className="flex flex-col items-center justify-center py-32 space-y-4">
             <div className="w-8 h-8 border-[3px] border-white/10 border-t-[#007AFF] rounded-full animate-spin"></div>
+            <p className="text-white/30 text-sm font-medium">正在检测网络环境...</p>
           </div>
         ) : (
           <>
@@ -527,7 +530,7 @@ export default function GlassStylePage() {
                   </span>
               </div>
               
-              {/* 占位符 (保持高度) */}
+              {/* 占位符 */}
               <div className="opacity-0 pointer-events-none flex items-center gap-2.5">
                   <Icon name="sparkles" className="w-5 h-5" />
                   <span className="text-[17px] font-semibold">生成新身份</span>
