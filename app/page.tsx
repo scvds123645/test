@@ -216,9 +216,10 @@ export default function GlassStylePage() {
   
   // 沉浸模式
   const [isImmersive, setIsImmersive] = useState(false);
-  // 背景图加载状态
+  
+  // 背景图相关
   const [bgLoaded, setBgLoaded] = useState(false);
-  // 【修复 1】引用图片元素
+  const [bgUrl, setBgUrl] = useState(''); // 新增：专门存带时间戳的 URL
   const imgRef = useRef<HTMLImageElement>(null);
   
   const [copiedField, setCopiedField] = useState<string | null>(null);
@@ -232,8 +233,12 @@ export default function GlassStylePage() {
 
   // --- Logic ---
   
-  // 【修复 2】强制检查图片加载状态 (修复 iOS 缓存不触发 onLoad 的问题)
+  // 【修复核心】组件挂载时，生成唯一时间戳，强制浏览器不缓存图片
   useEffect(() => {
+    // 1. 设置带时间戳的 URL
+    setBgUrl(`https://loliapi.com/acg/?t=${Date.now()}`);
+    
+    // 2. 检查图片缓存状态 (修复 iOS 缓存不触发 onLoad)
     if (imgRef.current && imgRef.current.complete) {
       setBgLoaded(true);
     }
@@ -344,18 +349,20 @@ export default function GlassStylePage() {
   return (
     <div className="min-h-screen relative font-sans text-white pb-10 selection:bg-blue-400/30 overflow-x-hidden touch-pan-y">
       
-      {/* 1. 背景层 (已修复 iOS 显示问题) */}
+      {/* 1. 背景层 (已修复 Safari 缓存和 iOS 显示问题) */}
       <div className="fixed inset-0 z-0 pointer-events-none bg-gradient-to-br from-[#0f172a] via-[#1e1b4b] to-[#312e81] transform-gpu">
-        <img 
-          ref={imgRef}
-          src="https://loliapi.com/acg/" 
-          alt="background" 
-          referrerPolicy="no-referrer"
-          className={`w-full h-full object-cover transition-opacity duration-1000 ease-in-out ${bgLoaded ? 'opacity-100' : 'opacity-0'}`}
-          decoding="async"
-          onLoad={() => setBgLoaded(true)}
-          onError={() => setBgLoaded(false)}
-        />
+        {bgUrl && (
+          <img 
+            ref={imgRef}
+            src={bgUrl} 
+            alt="background" 
+            referrerPolicy="no-referrer"
+            className={`w-full h-full object-cover transition-opacity duration-1000 ease-in-out ${bgLoaded ? 'opacity-100' : 'opacity-0'}`}
+            decoding="async"
+            onLoad={() => setBgLoaded(true)}
+            onError={() => setBgLoaded(false)}
+          />
+        )}
       </div>
       
       {/* 2. 沉浸模式恢复层 */}
