@@ -404,7 +404,7 @@ export function generatePassword(): string {
     password += secureRandom(0, 9).toString();
   }
 
-  // 长度修正 (substring 是 O(1) 的视图操作在 V8 中通常很快)
+  // 长度修正
   return password.length > targetLength ? password.substring(0, targetLength) : password;
 }
 

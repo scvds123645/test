@@ -110,7 +110,7 @@ async function fetchService<T>(
     const res = await fetch(url, {
       headers: COMMON_HEADERS,
       signal: controller.signal,
-      cache: 'no-store', // 禁止内部 Fetch 缓存，完全依赖我们的 LRU
+      cache: 'no-store', // 禁止内部 Fetch 缓存
       next: { revalidate: 0 }
     });
     
@@ -151,7 +151,7 @@ async function queryIpInfo(ip: string): Promise<GeoData> {
     source: 'ipinfo',
     ip: data.ip || ip,
     country: data.country,
-    countryName: data.country, // ipinfo free doesn't always give full name
+    countryName: data.country, 
     city: data.city,
     region: data.region,
     timezone: data.timezone,
@@ -178,7 +178,7 @@ async function queryIpWhoIs(ip: string): Promise<GeoData> {
   };
 }
 
-// 兜底服务 (HTTPS)
+// 兜底服务
 async function queryFreeIpApi(ip: string): Promise<GeoData> {
   const data = await fetchService<AnyApiResponse>('freeipapi', `https://freeipapi.com/api/json/${ip}`);
   if (!data || !data.countryCode) throw new Error('Invalid');
@@ -220,14 +220,17 @@ export async function GET(request: NextRequest) {
     });
   }
 
-  // 3. 检查缓存 (LRU)
+  // 3. 检查缓存 (LRU) - 即使命中缓存，也要设置 no-store 头给浏览器
   const cached = ipCache.get(ip);
   if (cached) {
     return NextResponse.json(
       { ...cached, source: `${cached.source} (cache)` },
       {
         headers: {
-          'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=60',
+          'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0',
+          'Surrogate-Control': 'no-store',
           'X-Cache-Status': 'HIT'
         }
       }
@@ -238,7 +241,6 @@ export async function GET(request: NextRequest) {
   let fetchPromise = inflightRequests.get(ip);
 
   if (!fetchPromise) {
-    // 定义主要策略
     const primaryStrategies = [
       queryIpApiCo(ip),
       queryIpInfo(ip),
@@ -247,17 +249,14 @@ export async function GET(request: NextRequest) {
 
     fetchPromise = Promise.any(primaryStrategies)
       .catch(async () => {
-        // 如果主策略全部失败，尝试兜底
         console.warn(`[GeoIP] All primaries failed for ${ip}, using fallback.`);
         return await queryFreeIpApi(ip);
       })
       .then(data => {
-        // 写入缓存
         ipCache.set(ip, data);
         return data;
       })
       .finally(() => {
-        // 移除正在进行的标记
         inflightRequests.delete(ip);
       });
 
@@ -269,12 +268,14 @@ export async function GET(request: NextRequest) {
     const result = await fetchPromise;
     return NextResponse.json(result, {
       headers: {
-        'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=60',
+        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0',
+        'Surrogate-Control': 'no-store',
         'X-Cache-Status': 'MISS'
       }
     });
   } catch (error) {
-    // 全面失败，返回默认值，防止前端报错
     return NextResponse.json({
       source: 'fallback_error',
       ip,

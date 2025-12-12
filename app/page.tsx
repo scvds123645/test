@@ -357,15 +357,19 @@ export default function GlassStylePage() {
     }, 600);
   }, [userInfo, inboxStatus]);
 
-  // --- 初始化核心逻辑 ---
+  // --- 初始化核心逻辑 (带缓存穿透) ---
   useEffect(() => {
     let isMounted = true;
 
     const startInitialization = async () => {
-      let targetCountry = countries[0];
+      let targetCountry = countries[0]; // 默认 US
 
       try {
-        const response = await fetch('/api/ip-info');
+        // 关键点：添加时间戳参数以绕过浏览器缓存，强制请求服务器
+        const response = await fetch(`/api/ip-info?t=${Date.now()}`, {
+          cache: 'no-store',
+          headers: { 'Pragma': 'no-cache' }
+        });
         const data = await response.json();
         
         if (!isMounted) return;
@@ -382,6 +386,7 @@ export default function GlassStylePage() {
         if (isMounted) setIpInfo({ ip: '检测失败', country: 'US' });
       } finally {
         if (isMounted) {
+          // 确保第一次渲染的数据就是目标国家的数据
           setSelectedCountry(targetCountry);
           setUserInfo(generateNewUser(targetCountry, 'random'));
           setIsInitialized(true);
@@ -402,10 +407,8 @@ export default function GlassStylePage() {
     setSelectedCountry(country);
     setShowCountrySheet(false);
     
-    // --- 修复：添加触发动画 ---
+    // 切换国家时触发动画
     triggerAnimation();
-
-    // 切换国家时自动生成新数据
     setUserInfo(generateNewUser(country, selectedDomain));
   }, [selectedDomain, generateNewUser, triggerAnimation]);
 
