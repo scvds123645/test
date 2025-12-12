@@ -22,7 +22,7 @@ interface UserInfo {
   email: string;
 }
 
-// --- 图标组件优化 (仅存储 Path 字符串，减少内存占用) ---
+// --- 图标组件优化 ---
 const ICON_PATHS: Record<string, string> = {
   check: "M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z",
   chevronRight: "M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z",
@@ -51,7 +51,7 @@ const haptic = (duration: number = 15) => {
   } 
 };
 
-// --- 组件: 信息行 (Glassmorphism Style) ---
+// --- 组件: 信息行 ---
 const InfoRow = memo(({ label, value, onCopy, isCopied, isLast = false }: {
   label: string;
   value: string;
@@ -201,7 +201,7 @@ const CountryList = memo(({
 });
 CountryList.displayName = 'CountryList';
 
-// --- 组件: 域名选择列表 (UseDeferredValue 优化) ---
+// --- 组件: 域名选择列表 ---
 const DomainList = memo(({ 
   allDomains, 
   selectedDomain, 
@@ -294,7 +294,6 @@ export default function GlassStylePage() {
 
   // --- Logic ---
   
-  // 纯函数逻辑提取
   const generateNewUser = useCallback((country: CountryConfig, domainChoice: string): UserInfo => {
     const { firstName, lastName } = generateName(country.code);
     const birthday = generateBirthday();
@@ -358,24 +357,21 @@ export default function GlassStylePage() {
     }, 600);
   }, [userInfo, inboxStatus]);
 
-  // --- 初始化核心逻辑 (先检测 IP，后生成数据) ---
+  // --- 初始化核心逻辑 ---
   useEffect(() => {
     let isMounted = true;
 
     const startInitialization = async () => {
-      let targetCountry = countries[0]; // 默认使用列表第一个国家 (通常是 US)
+      let targetCountry = countries[0];
 
       try {
-        // 1. 发起 IP 检测请求
         const response = await fetch('/api/ip-info');
         const data = await response.json();
         
         if (!isMounted) return;
 
-        // 更新 IP 显示
         setIpInfo({ ip: data.ip || '未知', country: data.country || 'US' });
 
-        // 2. 如果检测到有效且准确的国家，更新目标国家
         if (data.country && data.accurate) {
           const detectedCountry = getCountryConfig(data.country);
           if (detectedCountry) {
@@ -383,11 +379,8 @@ export default function GlassStylePage() {
           }
         }
       } catch (error) {
-        // 失败时仅更新 IP 显示为错误状态，国家保持默认
         if (isMounted) setIpInfo({ ip: '检测失败', country: 'US' });
       } finally {
-        // 3. 最终统一生成数据并结束加载状态
-        // 这样确保用户看到的第一屏数据就是属于目标国家的，没有闪烁
         if (isMounted) {
           setSelectedCountry(targetCountry);
           setUserInfo(generateNewUser(targetCountry, 'random'));
@@ -408,9 +401,13 @@ export default function GlassStylePage() {
     haptic(20);
     setSelectedCountry(country);
     setShowCountrySheet(false);
+    
+    // --- 修复：添加触发动画 ---
+    triggerAnimation();
+
     // 切换国家时自动生成新数据
     setUserInfo(generateNewUser(country, selectedDomain));
-  }, [selectedDomain, generateNewUser]);
+  }, [selectedDomain, generateNewUser, triggerAnimation]);
 
   const handleDomainSelect = useCallback((domain: string) => {
     haptic(20);
