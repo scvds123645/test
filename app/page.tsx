@@ -57,17 +57,15 @@ const StarBackground = memo(() => {
   }>>([]);
 
   useEffect(() => {
-    // 客户端生成随机数据，数量控制在30个以保证移动端性能
+    // 客户端生成随机数据
     const starCount = 30; 
     const newStars = new Array(starCount).fill(0).map(() => {
-      // 对应 SCSS: random_range(500em, 750em) / 100
       const tailLength = (Math.random() * (7.5 - 5) + 5).toFixed(2); 
-      // 对应 SCSS: random_range(0vh, 10000vh) / 100
       const top = (Math.random() * 100).toFixed(2);
-      // 对应 SCSS: random_range(6000, 12000s) / 1000
       const duration = (Math.random() * (12 - 6) + 6).toFixed(2);
-      // 对应 SCSS: random_range(0, 10000s) / 1000
-      const delay = (Math.random() * 10).toFixed(2);
+      
+      // 使用负数延迟，确保动画看起来“已经在进行中”
+      const delay = (Math.random() * -10).toFixed(2);
       
       return { top, duration, delay, tailLength };
     });
@@ -75,8 +73,16 @@ const StarBackground = memo(() => {
   }, []);
 
   return (
-    <div className="fixed inset-0 z-[5] pointer-events-none overflow-hidden">
-      <div className="stars-container">
+    // 【关键修改点】
+    // 1. z-[20]: 之前是 z-5。现在改成 20，比内容的 z-10 高，所以流星会显示在文字和按钮上面。
+    //    注：Header 是 z-40，弹窗是 z-50，所以流星不会挡住顶部导航和弹窗，视觉效果最舒适。
+    // 2. pointer-events-none: 确保点击事件“穿透”流星层，直接作用于下方的按钮。
+    <div className="fixed inset-0 z-[20] pointer-events-none overflow-hidden">
+      {/* 使用内联样式 rotate(-45deg) 避免初始加载时的角度跳变 */}
+      <div 
+        className="stars-container" 
+        style={{ transform: 'rotate(-45deg)' }} 
+      >
         {stars.map((star, i) => (
           <div
             key={i}
@@ -394,7 +400,7 @@ export default function GlassStylePage() {
         />
       </div>
       
-      {/* 2. 流星雨层 (z-5) - 放在背景图和内容之间 */}
+      {/* 2. 流星雨层 (z-20) - 位于内容之上，Header之下 */}
       <StarBackground />
 
       {/* 3. 沉浸模式恢复层 (z-30) */}
@@ -648,14 +654,14 @@ export default function GlassStylePage() {
           animation: slide-success-cycle 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
         }
 
-        /* --- 流星雨动画 CSS (由 SCSS 转换而来) --- */
+        /* --- 流星雨动画 CSS --- */
         .stars-container {
           position: fixed;
           top: 0;
           left: 0;
           width: 100%;
           height: 120%;
-          transform: rotate(-45deg);
+          /* 旋转已移至内联样式以避免 FOUC */
           contain: strict;
         }
 
@@ -673,7 +679,7 @@ export default function GlassStylePage() {
           background: linear-gradient(45deg, currentColor, transparent);
           border-radius: 50%;
           filter: drop-shadow(0 0 6px currentColor);
-          transform: translate3d(120em, 0, 0); /* 起始位置在屏幕外 */
+          transform: translate3d(120em, 0, 0); /* 起始位置在屏幕右侧外 */
           will-change: transform;
           
           /* 桌面端默认动画: 包含拖尾渐变 */
@@ -704,7 +710,7 @@ export default function GlassStylePage() {
 
         @keyframes fall {
           to {
-            transform: translate3d(-50em, 0, 0); /* 终点位置 */
+            transform: translate3d(-50em, 0, 0); /* 终点位置在屏幕左侧外 */
           }
         }
 
