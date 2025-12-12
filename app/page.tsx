@@ -627,7 +627,6 @@ export default function GlassStylePage() {
         .cubic-bezier-bounce {
           transition-timing-function: cubic-bezier(0.34, 1.56, 0.64, 1);
         }
-
         /* --- 按钮动画 Keyframes --- */
         
         @keyframes btn-bg-success {
@@ -647,7 +646,6 @@ export default function GlassStylePage() {
         .anim-bg-success {
           animation: btn-bg-success 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
         }
-
         @keyframes slide-normal-cycle {
           0% { transform: translateY(0) scale(1); opacity: 1; }
           20% { transform: translateY(-20px) scale(0.95); opacity: 0; }
@@ -657,7 +655,6 @@ export default function GlassStylePage() {
         .anim-slide-normal {
           animation: slide-normal-cycle 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
         }
-
         @keyframes slide-success-cycle {
           0% { transform: translateY(20px) scale(0.9); opacity: 0; }
           25% { transform: translateY(0) scale(1.05); opacity: 1; }
