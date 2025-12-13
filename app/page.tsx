@@ -8,7 +8,6 @@ import {
   generatePhone,
   generatePassword,
   generateEmail,
-  getCountryConfig,
   getAllDomains
 } from '@/lib/generator';
 
@@ -118,7 +117,7 @@ const BottomSheet = memo(({
       {/* 
           弹窗容器修改：
           1. bg-black/40: 稍微比卡片的30%深一点点，确保内容清晰，但风格一致。
-          2. 移除了 backdrop-blur 类: 实现“无模糊”效果，背景图清晰可见。
+          2. 移除了 backdrop-blur 类: 实现"无模糊"效果，背景图清晰可见。
       */}
       <div 
         className="relative w-full max-w-md bg-black/40 border border-white/20 rounded-t-[24px] sm:rounded-[24px] max-h-[85vh] flex flex-col shadow-2xl animate-slide-up overflow-hidden will-change-transform transform-gpu"
@@ -212,15 +211,15 @@ DomainList.displayName = 'DomainList';
 
 export default function GlassStylePage() {
   // --- State ---
-  const [selectedCountry, setSelectedCountry] = useState<CountryConfig>(countries[0]);
+  const [selectedCountry, setSelectedCountry] = useState<CountryConfig>(() => 
+    countries[Math.floor(Math.random() * countries.length)]
+  );
   const [selectedDomain, setSelectedDomain] = useState<string>('random');
   const [userInfo, setUserInfo] = useState<UserInfo>({
     firstName: '', lastName: '', birthday: '', phone: '', password: '', email: ''
   });
   const [showCountrySheet, setShowCountrySheet] = useState(false);
   const [showDomainSheet, setShowDomainSheet] = useState(false);
-  const [ipInfo, setIpInfo] = useState({ ip: '...', country: 'US' });
-  const [isInitialized, setIsInitialized] = useState(false);
   
   // 沉浸模式
   const [isImmersive, setIsImmersive] = useState(false);
@@ -290,47 +289,25 @@ export default function GlassStylePage() {
     }, 600);
   }, [userInfo.email, inboxStatus]);
 
+  // 简化初始化逻辑：组件挂载时直接生成用户信息
   useEffect(() => {
-    let isMounted = true;
-const initializeApp = async () => {
-  try {
-    // 使用客户端 IP 检测服务 (GitHub Pages 不支持后端 API)
-    const response = await fetch('https://ipapi.co/json/');
-    const data = await response.json();
-    if (!isMounted) return;
-    setIpInfo({ ip: data.ip || '未知', country: data.country_code || 'US' });
-    if (data.country_code) {
-      const detectedCountry = getCountryConfig(data.country_code);
-      if (detectedCountry) setSelectedCountry(detectedCountry);
+    if (!userInfo.firstName) {
+      try {
+        const { firstName, lastName } = generateName(selectedCountry.code);
+        const birthday = generateBirthday();
+        const phone = generatePhone(selectedCountry);
+        const password = generatePassword();
+        const customDomain = selectedDomain === 'random' ? undefined : selectedDomain;
+        const email = generateEmail(firstName, lastName, customDomain);
+        setUserInfo({ firstName, lastName, birthday, phone, password, email });
+      } catch (e) { 
+        console.error(e); 
+      }
     }
-    setIsInitialized(true);
-  } catch (error) {
-    if (isMounted) {
-      setIpInfo({ ip: '检测失败', country: 'US' });
-      setIsInitialized(true);
-    }
-  }
-};
-    initializeApp();
-    return () => { isMounted = false; };
-  }, []);
+  }, [userInfo.firstName, selectedCountry, selectedDomain]);
 
   useEffect(() => {
-    if (isInitialized && !userInfo.firstName) {
-        try {
-            const { firstName, lastName } = generateName(selectedCountry.code);
-            const birthday = generateBirthday();
-            const phone = generatePhone(selectedCountry);
-            const password = generatePassword();
-            const customDomain = selectedDomain === 'random' ? undefined : selectedDomain;
-            const email = generateEmail(firstName, lastName, customDomain);
-            setUserInfo({ firstName, lastName, birthday, phone, password, email });
-        } catch (e) { console.error(e); }
-    }
-  }, [isInitialized, userInfo.firstName, selectedCountry, selectedDomain]);
-
-  useEffect(() => {
-    if (isInitialized && userInfo.firstName) generate();
+    if (userInfo.firstName) generate();
   }, [selectedCountry.code]);
 
   const allDomains = useMemo(() => getAllDomains(), []);
@@ -377,11 +354,6 @@ const initializeApp = async () => {
           >
             脸书小助手
           </h1>
-          
-          <div className={`flex items-center gap-1.5 pl-2 pr-2.5 py-1 rounded-full bg-black/40 border border-white/20 shadow-lg transition-all duration-500 ease-in-out will-change-transform ${isImmersive ? 'opacity-0 translate-x-10 pointer-events-none' : 'opacity-100 translate-x-0'}`}>
-            <div className="w-1.5 h-1.5 rounded-full bg-[#34C759] shadow-[0_0_6px_rgba(52,199,89,1)]"></div>
-            <span className="text-[11px] font-semibold text-white/95 font-mono tracking-tight drop-shadow-md">{ipInfo.ip}</span>
-          </div>
         </header>
 
         <main 
@@ -392,147 +364,138 @@ const initializeApp = async () => {
             }`}
         >
           
-          {!isInitialized ? (
-            <div className="flex flex-col items-center justify-center py-32 space-y-4">
-              <div className="w-8 h-8 border-[3px] border-white/20 border-t-[#007AFF] rounded-full animate-spin drop-shadow-lg"></div>
-            </div>
-          ) : (
-            <>
-              {/* 信息卡片: bg-black/30, border-white/20, 无模糊 */}
-              <section className="bg-black/30 rounded-[20px] overflow-hidden border border-white/20 transform-gpu isolate">
-                <InfoRow label="姓氏" value={userInfo.lastName} onCopy={() => copyToClipboard(userInfo.lastName, '姓氏')} isCopied={copiedField === '姓氏'} />
-                <InfoRow label="名字" value={userInfo.firstName} onCopy={() => copyToClipboard(userInfo.firstName, '名字')} isCopied={copiedField === '名字'} />
-                <InfoRow label="生日" value={userInfo.birthday} onCopy={() => copyToClipboard(userInfo.birthday, '生日')} isCopied={copiedField === '生日'} />
-                <InfoRow label="手机号" value={userInfo.phone} onCopy={() => copyToClipboard(userInfo.phone, '手机号')} isCopied={copiedField === '手机号'} />
-                <InfoRow label="密码" value={userInfo.password} onCopy={() => copyToClipboard(userInfo.password, '密码')} isCopied={copiedField === '密码'} />
-                
-                <div className="relative flex flex-col py-4 pl-5 pr-5 group transition-colors duration-200">
-                  <div 
-                    className="flex items-center justify-between mb-3 cursor-pointer touch-manipulation" 
-                    onClick={() => copyToClipboard(userInfo.email, '邮箱')}
-                  >
-                    <span className="text-[15px] font-medium text-white/80 w-20 shrink-0 tracking-tight drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">邮箱</span>
-                    
-                    <div className="flex items-center gap-3 min-w-0 flex-1 justify-end h-6 relative overflow-hidden">
-                      <span 
-                        className={`absolute right-0 text-[17px] font-bold truncate select-all tracking-tight transition-all duration-300 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)] ${
-                          copiedField === '邮箱' ? 'opacity-0 translate-y-4 scale-95' : 'opacity-100 translate-y-0 scale-100 text-white'
-                        }`}
-                      >
-                        {userInfo.email}
-                      </span>
-                      <div 
-                        className={`absolute right-0 flex items-center gap-1.5 transition-all duration-300 cubic-bezier-bounce ${
-                          copiedField === '邮箱' ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 -translate-y-4 scale-90 pointer-events-none'
-                        }`}
-                      >
-                        <div className="bg-[#34C759] rounded-full p-0.5 shadow-[0_0_8px_rgba(52,199,89,0.8)]">
-                          <Icon name="check" className="w-3 h-3 text-white stroke-[3px]" />
-                        </div>
-                        <span className="text-[15px] font-semibold text-[#34C759] drop-shadow-md">已复制</span>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div className="flex justify-end pt-1">
-                    <button
-                      onClick={handleInboxClick}
-                      className={`inline-flex items-center gap-1.5 py-1.5 px-4 rounded-full text-[13px] font-semibold transition-all duration-300 active:scale-95 touch-manipulation overflow-hidden relative border shadow-lg ${
-                          inboxStatus === 'opening' 
-                          ? 'bg-[#34C759]/40 border-[#34C759]/50 text-[#4ADE80]' 
-                          : 'bg-[#007AFF]/30 border-[#007AFF]/40 hover:bg-[#007AFF]/40 text-[#409CFF] active:bg-[#007AFF]/50'
-                      }`}
-                    >
-                      <div className={`flex items-center gap-1.5 transition-all duration-300 ${inboxStatus === 'opening' ? '-translate-y-8 opacity-0' : 'translate-y-0 opacity-100'}`}>
-                          <Icon name="inbox" className="w-3.5 h-3.5" />
-                          <span className="drop-shadow-sm">查看收件箱</span>
-                      </div>
-                      <div className={`absolute inset-0 flex items-center justify-center gap-1.5 transition-all duration-300 ${inboxStatus === 'opening' ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'}`}>
-                          <Icon name="open" className="w-3.5 h-3.5" />
-                          已打开
-                      </div>
-                    </button>
-                  </div>
-                </div>
-              </section>
-
-              <button
-                ref={buttonRef}
-                onClick={generate}
-                disabled={!isInitialized}
-                className="w-full py-4 rounded-[18px] shadow-[0_0_20px_rgba(0,122,255,0.4)] border border-white/20 flex items-center justify-center gap-2.5 transform-gpu touch-manipulation overflow-hidden relative active:scale-[0.96] active:brightness-90 bg-gradient-to-b from-[#007AFF]/90 to-[#0055b3]/90 hover:scale-[1.01] hover:brightness-110 transition-transform duration-100"
+          {/* 信息卡片: bg-black/30, border-white/20, 无模糊 */}
+          <section className="bg-black/30 rounded-[20px] overflow-hidden border border-white/20 transform-gpu isolate">
+            <InfoRow label="姓氏" value={userInfo.lastName} onCopy={() => copyToClipboard(userInfo.lastName, '姓氏')} isCopied={copiedField === '姓氏'} />
+            <InfoRow label="名字" value={userInfo.firstName} onCopy={() => copyToClipboard(userInfo.firstName, '名字')} isCopied={copiedField === '名字'} />
+            <InfoRow label="生日" value={userInfo.birthday} onCopy={() => copyToClipboard(userInfo.birthday, '生日')} isCopied={copiedField === '生日'} />
+            <InfoRow label="手机号" value={userInfo.phone} onCopy={() => copyToClipboard(userInfo.phone, '手机号')} isCopied={copiedField === '手机号'} />
+            <InfoRow label="密码" value={userInfo.password} onCopy={() => copyToClipboard(userInfo.password, '密码')} isCopied={copiedField === '密码'} />
+            
+            <div className="relative flex flex-col py-4 pl-5 pr-5 group transition-colors duration-200">
+              <div 
+                className="flex items-center justify-between mb-3 cursor-pointer touch-manipulation" 
+                onClick={() => copyToClipboard(userInfo.email, '邮箱')}
               >
-                <div 
-                  ref={normalContentRef}
-                  className="absolute flex items-center gap-2.5 translate-y-0 opacity-100 scale-100"
-                >
-                    <Icon name="sparkles" className="w-5 h-5 text-white/90 drop-shadow-sm" />
-                    <span className="text-[17px] font-semibold tracking-tight text-white drop-shadow-md">
-                      生成新身份
-                    </span>
-                </div>
-
-                <div 
-                  ref={successContentRef}
-                  className="absolute flex items-center gap-2.5 translate-y-8 opacity-0 scale-100"
-                >
-                     <div className="bg-white/20 rounded-full p-1">
-                        <Icon name="check" className="w-5 h-5 text-white stroke-[3px]" />
-                     </div>
-                     <span className="text-[17px] font-semibold tracking-tight text-white drop-shadow-md">
-                      已生成
-                    </span>
-                </div>
+                <span className="text-[15px] font-medium text-white/80 w-20 shrink-0 tracking-tight drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">邮箱</span>
                 
-                <div className="opacity-0 pointer-events-none flex items-center gap-2.5">
-                    <Icon name="sparkles" className="w-5 h-5" />
-                    <span className="text-[17px] font-semibold">生成新身份</span>
+                <div className="flex items-center gap-3 min-w-0 flex-1 justify-end h-6 relative overflow-hidden">
+                  <span 
+                    className={`absolute right-0 text-[17px] font-bold truncate select-all tracking-tight transition-all duration-300 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)] ${
+                      copiedField === '邮箱' ? 'opacity-0 translate-y-4 scale-95' : 'opacity-100 translate-y-0 scale-100 text-white'
+                    }`}
+                  >
+                    {userInfo.email}
+                  </span>
+                  <div 
+                    className={`absolute right-0 flex items-center gap-1.5 transition-all duration-300 cubic-bezier-bounce ${
+                      copiedField === '邮箱' ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 -translate-y-4 scale-90 pointer-events-none'
+                    }`}
+                  >
+                    <div className="bg-[#34C759] rounded-full p-0.5 shadow-[0_0_8px_rgba(52,199,89,0.8)]">
+                      <Icon name="check" className="w-3 h-3 text-white stroke-[3px]" />
+                    </div>
+                    <span className="text-[15px] font-semibold text-[#34C759] drop-shadow-md">已复制</span>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="flex justify-end pt-1">
+                <button
+                  onClick={handleInboxClick}
+                  className={`inline-flex items-center gap-1.5 py-1.5 px-4 rounded-full text-[13px] font-semibold transition-all duration-300 active:scale-95 touch-manipulation overflow-hidden relative border shadow-lg ${
+                      inboxStatus === 'opening' 
+                      ? 'bg-[#34C759]/40 border-[#34C759]/50 text-[#4ADE80]' 
+                      : 'bg-[#007AFF]/30 border-[#007AFF]/40 hover:bg-[#007AFF]/40 text-[#409CFF] active:bg-[#007AFF]/50'
+                  }`}
+                >
+                  <div className={`flex items-center gap-1.5 transition-all duration-300 ${inboxStatus === 'opening' ? '-translate-y-8 opacity-0' : 'translate-y-0 opacity-100'}`}>
+                      <Icon name="inbox" className="w-3.5 h-3.5" />
+                      <span className="drop-shadow-sm">查看收件箱</span>
+                  </div>
+                  <div className={`absolute inset-0 flex items-center justify-center gap-1.5 transition-all duration-300 ${inboxStatus === 'opening' ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'}`}>
+                      <Icon name="open" className="w-3.5 h-3.5" />
+                      已打开
+                  </div>
+                </button>
+              </div>
+            </div>
+          </section>
+
+          <button
+            ref={buttonRef}
+            onClick={generate}
+            className="w-full py-4 rounded-[18px] shadow-[0_0_20px_rgba(0,122,255,0.4)] border border-white/20 flex items-center justify-center gap-2.5 transform-gpu touch-manipulation overflow-hidden relative active:scale-[0.96] active:brightness-90 bg-gradient-to-b from-[#007AFF]/90 to-[#0055b3]/90 hover:scale-[1.01] hover:brightness-110 transition-transform duration-100"
+          >
+            <div 
+              ref={normalContentRef}
+              className="absolute flex items-center gap-2.5 translate-y-0 opacity-100 scale-100"
+            >
+                <Icon name="sparkles" className="w-5 h-5 text-white/90 drop-shadow-sm" />
+                <span className="text-[17px] font-semibold tracking-tight text-white drop-shadow-md">
+                  生成新身份
+                </span>
+            </div>
+
+            <div 
+              ref={successContentRef}
+              className="absolute flex items-center gap-2.5 translate-y-8 opacity-0 scale-100"
+            >
+                 <div className="bg-white/20 rounded-full p-1">
+                    <Icon name="check" className="w-5 h-5 text-white stroke-[3px]" />
+                 </div>
+                 <span className="text-[17px] font-semibold tracking-tight text-white drop-shadow-md">
+                  已生成
+                </span>
+            </div>
+            
+            <div className="opacity-0 pointer-events-none flex items-center gap-2.5">
+                <Icon name="sparkles" className="w-5 h-5" />
+                <span className="text-[17px] font-semibold">生成新身份</span>
+            </div>
+          </button>
+
+          <section>
+            <div className="pl-5 mb-2 text-[13px] font-medium text-white/80 uppercase tracking-wide drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">生成设置</div>
+            <div className="bg-black/30 rounded-[18px] overflow-hidden border border-white/20 transform-gpu isolate">
+              <button
+                onClick={() => { haptic(20); setShowCountrySheet(true); }}
+                className="w-full flex items-center justify-between py-4 pl-5 pr-4 hover:bg-white/10 active:bg-white/20 transition-colors duration-200 group touch-manipulation"
+              >
+                <span className="text-[16px] font-medium text-white/90 tracking-tight drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">选择地区</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-[16px] text-white/90 tracking-tight drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">{selectedCountry.name}</span>
+                  <Icon name="chevronRight" className="w-4 h-4 text-white/70 group-active:text-white/90 transition-transform duration-300 group-active:rotate-90 drop-shadow-md" />
                 </div>
               </button>
-
-              <section>
-                <div className="pl-5 mb-2 text-[13px] font-medium text-white/80 uppercase tracking-wide drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">生成设置</div>
-                <div className="bg-black/30 rounded-[18px] overflow-hidden border border-white/20 transform-gpu isolate">
-                  <button
-                    onClick={() => { haptic(20); setShowCountrySheet(true); }}
-                    className="w-full flex items-center justify-between py-4 pl-5 pr-4 hover:bg-white/10 active:bg-white/20 transition-colors duration-200 group touch-manipulation"
-                  >
-                    <span className="text-[16px] font-medium text-white/90 tracking-tight drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">选择地区</span>
-                    <div className="flex items-center gap-2">
-                      <span className="text-[16px] text-white/90 tracking-tight drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">{selectedCountry.name}</span>
-                      <Icon name="chevronRight" className="w-4 h-4 text-white/70 group-active:text-white/90 transition-transform duration-300 group-active:rotate-90 drop-shadow-md" />
-                    </div>
-                  </button>
-                  <div className="ml-5 h-[0.5px] bg-white/20" />
-                  <button
-                    onClick={() => { haptic(20); setShowDomainSheet(true); }}
-                    className="w-full flex items-center justify-between py-4 pl-5 pr-4 hover:bg-white/10 active:bg-white/20 transition-colors duration-200 group touch-manipulation"
-                  >
-                    <span className="text-[16px] font-medium text-white/90 tracking-tight drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">邮箱域名</span>
-                    <div className="flex items-center gap-2">
-                      <span className="text-[16px] text-white/90 tracking-tight drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">{displayDomain}</span>
-                      <Icon name="chevronRight" className="w-4 h-4 text-white/70 group-active:text-white/90 transition-transform duration-300 group-active:rotate-90 drop-shadow-md" />
-                    </div>
-                  </button>
+              <div className="ml-5 h-[0.5px] bg-white/20" />
+              <button
+                onClick={() => { haptic(20); setShowDomainSheet(true); }}
+                className="w-full flex items-center justify-between py-4 pl-5 pr-4 hover:bg-white/10 active:bg-white/20 transition-colors duration-200 group touch-manipulation"
+              >
+                <span className="text-[16px] font-medium text-white/90 tracking-tight drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">邮箱域名</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-[16px] text-white/90 tracking-tight drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">{displayDomain}</span>
+                  <Icon name="chevronRight" className="w-4 h-4 text-white/70 group-active:text-white/90 transition-transform duration-300 group-active:rotate-90 drop-shadow-md" />
                 </div>
-              </section>
+              </button>
+            </div>
+          </section>
 
-              <footer className="pt-4 pb-8 text-center space-y-4">
-                <a 
-                  href="https://t.me/fang180" 
-                  target="_blank" 
-                  rel="noopener noreferrer" 
-                  className="inline-flex items-center gap-1.5 text-[14px] text-[#409CFF] hover:text-[#60aeff] font-bold transition-colors active:opacity-60 py-2 px-4 rounded-full bg-black/40 touch-manipulation shadow-lg border border-white/10"
-                >
-                  <Icon name="link" className="w-4 h-4" />
-                  <span className="drop-shadow-md">加入 Telegram 频道</span>
-                </a>
-                <p className="text-[12px] text-white/80 font-medium tracking-tight drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">
-                  支持 {countries.length} 个国家 • {allDomains.length} 个域名
-                </p>
-              </footer>
-            </>
-          )}
+          <footer className="pt-4 pb-8 text-center space-y-4">
+            <a 
+              href="https://t.me/fang180" 
+              target="_blank" 
+              rel="noopener noreferrer" 
+              className="inline-flex items-center gap-1.5 text-[14px] text-[#409CFF] hover:text-[#60aeff] font-bold transition-colors active:opacity-60 py-2 px-4 rounded-full bg-black/40 touch-manipulation shadow-lg border border-white/10"
+            >
+              <Icon name="link" className="w-4 h-4" />
+              <span className="drop-shadow-md">加入 Telegram 频道</span>
+            </a>
+            <p className="text-[12px] text-white/80 font-medium tracking-tight drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">
+              支持 {countries.length} 个国家 • {allDomains.length} 个域名
+            </p>
+          </footer>
         </main>
       </div>
 
